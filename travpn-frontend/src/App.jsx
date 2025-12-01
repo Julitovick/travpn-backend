@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plane, MapPin, Globe, Info, X, Hotel, Ship, Shield, CheckCircle, ExternalLink, AlertTriangle, EyeOff, CreditCard, ChevronRight, Lock } from 'lucide-react';
+import { Search, Plane, MapPin, Globe, Info, X, Hotel, Ship, Shield, CheckCircle, ExternalLink, AlertTriangle, EyeOff, CreditCard, Calendar, Lock } from 'lucide-react';
 
-// URL DE TU BACKEND (Asegúrate de que es la de Render)
+// URL DE TU BACKEND
 const API_URL_BASE = 'https://travpn-backend-x82z.onrender.com/api'; 
 
 const EXCHANGE_RATES = {
@@ -9,7 +9,6 @@ const EXCHANGE_RATES = {
   'INR': 0.011, 'TRY': 0.029, 'JPY': 0.0062, 'MXN': 0.054
 };
 
-// --- LISTA DE IMÁGENES DE FONDO ---
 const BACKGROUND_IMAGES = [
   'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop', // Suiza
   'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=2073&auto=format&fit=crop', // París
@@ -24,7 +23,9 @@ const BACKGROUND_IMAGES = [
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('flights');
+  const [tripType, setTripType] = useState('roundtrip'); // 'roundtrip' | 'oneway'
   const [userCurrency, setUserCurrency] = useState('EUR');
+  const [userLanguage, setUserLanguage] = useState('ES');
   
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
@@ -36,7 +37,6 @@ const App = () => {
     origin: '', destination: '', date: '', returnDate: ''
   });
 
-  // Efecto para elegir imagen al azar al cargar
   useEffect(() => {
     const randomIndex = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
     setBgImage(BACKGROUND_IMAGES[randomIndex]);
@@ -44,7 +44,7 @@ const App = () => {
 
   const getDealLink = () => {
     if (activeTab === 'flights') {
-        const dateFormatted = formData.date.slice(2).replace(/-/g, ''); 
+        const dateFormatted = formData.date ? formData.date.slice(2).replace(/-/g, '') : '';
         return `https://www.skyscanner.es/transport/flights/${formData.origin}/${formData.destination}/${dateFormatted}`;
     } else if (activeTab === 'hotels') {
         return `https://www.booking.com/searchresults.html?ss=${formData.destination}`;
@@ -105,7 +105,6 @@ const App = () => {
 
     } catch (error) {
       console.error(error);
-      // Fallback para demo si falla el backend
       setResults([
         { country: 'Brasil', flag: '🇧🇷', price: 1500, currency: 'BRL', airline: 'Latam', hotelName: 'Rio Palace', cruiseLine: 'MSC Brazil' },
         { country: 'Turquía', flag: '🇹🇷', price: 8500, currency: 'TRY', airline: 'Turkish Airlines', hotelName: 'Grand Istanbul', cruiseLine: 'Bosphorus Lines' },
@@ -119,90 +118,157 @@ const App = () => {
   return (
     <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
       
-      {/* --- HEADER CON FONDO DINÁMICO --- */}
-      <div className="bg-blue-900 text-white pb-48 relative overflow-hidden transition-all duration-1000">
+      {/* --- HEADER --- */}
+      <div className="bg-blue-900 text-white pb-64 relative overflow-hidden transition-all duration-1000">
         
-        {/* Selector de Moneda */}
-        <div className="absolute top-4 right-4 z-20 bg-black/30 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/20 hover:bg-black/40 transition">
-            <span className="text-xs text-slate-200 uppercase font-semibold">Moneda:</span>
-            <select 
-                value={userCurrency} 
-                onChange={(e) => setUserCurrency(e.target.value)}
-                className="bg-transparent font-bold text-white outline-none cursor-pointer"
-            >
-                <option value="EUR" className="text-slate-900">EUR (€)</option>
-                <option value="USD" className="text-slate-900">USD ($)</option>
-                <option value="GBP" className="text-slate-900">GBP (£)</option>
-            </select>
+        {/* Barra Superior: Idioma y Moneda */}
+        <div className="absolute top-0 w-full z-20 bg-gradient-to-b from-black/50 to-transparent p-4 flex justify-between items-start md:items-center">
+            <div className="hidden md:block"></div> {/* Spacer */}
+            <div className="flex gap-3 ml-auto">
+                {/* Selector Idioma */}
+                <div className="bg-black/30 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center gap-2 border border-white/20 hover:bg-black/40 transition">
+                    <Globe className="h-3 w-3 text-slate-300"/>
+                    <select 
+                        value={userLanguage} 
+                        onChange={(e) => setUserLanguage(e.target.value)}
+                        className="bg-transparent font-bold text-white text-xs outline-none cursor-pointer uppercase"
+                    >
+                        <option value="ES" className="text-slate-900">ES</option>
+                        <option value="EN" className="text-slate-900">EN</option>
+                        <option value="FR" className="text-slate-900">FR</option>
+                        <option value="PT" className="text-slate-900">PT</option>
+                    </select>
+                </div>
+
+                {/* Selector Moneda */}
+                <div className="bg-black/30 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center gap-2 border border-white/20 hover:bg-black/40 transition">
+                    <span className="text-xs text-slate-300 font-bold">$</span>
+                    <select 
+                        value={userCurrency} 
+                        onChange={(e) => setUserCurrency(e.target.value)}
+                        className="bg-transparent font-bold text-white text-xs outline-none cursor-pointer"
+                    >
+                        <option value="EUR" className="text-slate-900">EUR (€)</option>
+                        <option value="USD" className="text-slate-900">USD ($)</option>
+                        <option value="GBP" className="text-slate-900">GBP (£)</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
-        {/* Imagen de Fondo Dinámica */}
+        {/* Imagen de Fondo */}
         {bgImage && (
             <div 
                 className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
                 style={{ backgroundImage: `url('${bgImage}')` }}
             />
         )}
-        
-        {/* Overlay degradado */}
         <div className="absolute inset-0 bg-gradient-to-b from-blue-900/60 via-blue-900/40 to-blue-900/90" />
 
-        <div className="relative container mx-auto px-4 pt-10">
-          <nav className="flex items-center gap-2 mb-12">
+        {/* Textos Principales */}
+        <div className="relative container mx-auto px-4 pt-20 text-center">
+          <nav className="flex justify-center items-center gap-2 mb-8 animate-fade-in-down">
             <Globe className="text-teal-400 h-8 w-8 drop-shadow-md" /> 
-            <span className="text-2xl font-bold tracking-tighter drop-shadow-md">TRAVPN</span>
+            <span className="text-3xl font-bold tracking-tighter drop-shadow-md">TRAVPN</span>
           </nav>
 
-          <div className="text-center mb-10">
-            <span className="inline-block py-1 px-3 rounded-full bg-blue-600/30 backdrop-blur-sm border border-blue-400/50 text-blue-100 text-xs font-bold uppercase tracking-wider mb-4 shadow-lg">
+          <div className="mb-10">
+            <span className="inline-block py-1 px-3 rounded-full bg-blue-600/40 backdrop-blur-md border border-blue-400/50 text-blue-100 text-xs font-bold uppercase tracking-wider mb-6 shadow-lg">
               Ahora buscando en 50+ países 🌍
             </span>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight drop-shadow-lg">
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight drop-shadow-xl">
               Ubicación virtual.<br /> 
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-blue-200">Ahorro real.</span>
             </h1>
-            <p className="text-white/90 text-lg max-w-2xl mx-auto font-light drop-shadow-md">
-              Las aerolíneas cambian los precios según tu ubicación. Nosotros te decimos desde dónde conectarte para pagar menos.
-            </p>
           </div>
         </div>
       </div>
 
-      {/* --- BUSCADOR --- */}
-      <div className="container mx-auto px-4 -mt-32 relative z-10 mb-24">
+      {/* --- CAJA DE BÚSQUEDA FLOTANTE --- */}
+      <div className="container mx-auto px-4 -mt-40 relative z-10 mb-24">
         <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden max-w-5xl mx-auto border border-slate-100">
           
-          <div className="flex bg-slate-50 p-2 border-b border-slate-200 gap-1">
-            <button onClick={() => setActiveTab('flights')} className={`flex-1 py-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all ${activeTab === 'flights' ? 'bg-white shadow text-blue-600 ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Plane className="h-5 w-5" /> Vuelos</button>
-            <button onClick={() => setActiveTab('hotels')} className={`flex-1 py-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all ${activeTab === 'hotels' ? 'bg-white shadow text-blue-600 ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Hotel className="h-5 w-5" /> Hoteles</button>
-            <button onClick={() => setActiveTab('cruises')} className={`flex-1 py-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all ${activeTab === 'cruises' ? 'bg-white shadow text-blue-600 ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Ship className="h-5 w-5" /> Cruceros</button>
+          {/* Pestañas Superiores */}
+          <div className="flex bg-slate-50 p-2 border-b border-slate-200 gap-1 overflow-x-auto">
+            <button onClick={() => setActiveTab('flights')} className={`flex-1 min-w-[100px] py-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all ${activeTab === 'flights' ? 'bg-white shadow text-blue-600 ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Plane className="h-5 w-5" /> Vuelos</button>
+            <button onClick={() => setActiveTab('hotels')} className={`flex-1 min-w-[100px] py-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all ${activeTab === 'hotels' ? 'bg-white shadow text-blue-600 ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Hotel className="h-5 w-5" /> Hoteles</button>
+            <button onClick={() => setActiveTab('cruises')} className={`flex-1 min-w-[100px] py-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all ${activeTab === 'cruises' ? 'bg-white shadow text-blue-600 ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Ship className="h-5 w-5" /> Cruceros</button>
           </div>
 
-          <form onSubmit={handleSearch} className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-white">
+          <form onSubmit={handleSearch} className="p-6 md:p-8 bg-white">
+            
+            {/* OPCIONES DE VUELO (Solo ida / Ida y vuelta) */}
             {activeTab === 'flights' && (
-                <div className="md:col-span-3">
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">Origen</label>
-                    <div className="relative">
-                        <MapPin className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                        <input type="text" placeholder="Madrid (MAD)" className="w-full pl-10 p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-medium" value={formData.origin} onChange={(e) => setFormData({...formData, origin: e.target.value})} />
-                    </div>
+                <div className="flex gap-4 mb-6">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${tripType === 'roundtrip' ? 'border-blue-600' : 'border-slate-300'}`}>
+                            {tripType === 'roundtrip' && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}
+                        </div>
+                        <input type="radio" name="tripType" value="roundtrip" className="hidden" checked={tripType === 'roundtrip'} onChange={() => setTripType('roundtrip')} />
+                        <span className={`font-semibold ${tripType === 'roundtrip' ? 'text-blue-900' : 'text-slate-500 group-hover:text-slate-700'}`}>Ida y vuelta</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${tripType === 'oneway' ? 'border-blue-600' : 'border-slate-300'}`}>
+                            {tripType === 'oneway' && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}
+                        </div>
+                        <input type="radio" name="tripType" value="oneway" className="hidden" checked={tripType === 'oneway'} onChange={() => setTripType('oneway')} />
+                        <span className={`font-semibold ${tripType === 'oneway' ? 'text-blue-900' : 'text-slate-500 group-hover:text-slate-700'}`}>Solo ida</span>
+                    </label>
                 </div>
             )}
-            <div className={`${activeTab === 'flights' ? 'md:col-span-3' : 'md:col-span-6'}`}>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">Destino</label>
-                <div className="relative">
-                    <Globe className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                    <input type="text" placeholder={activeTab === 'hotels' ? "París, Centro" : "Tokio (HND)"} className="w-full pl-10 p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-medium" value={formData.destination} onChange={(e) => setFormData({...formData, destination: e.target.value})} />
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                {/* ORIGEN (Solo vuelos) */}
+                {activeTab === 'flights' && (
+                    <div className="md:col-span-3">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">Origen</label>
+                        <div className="relative">
+                            <MapPin className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+                            <input type="text" placeholder="Madrid (MAD)" className="w-full pl-10 p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-medium" value={formData.origin} onChange={(e) => setFormData({...formData, origin: e.target.value})} />
+                        </div>
+                    </div>
+                )}
+
+                {/* DESTINO */}
+                <div className={`${activeTab === 'flights' ? 'md:col-span-3' : 'md:col-span-4'}`}>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">Destino</label>
+                    <div className="relative">
+                        <Globe className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+                        <input type="text" placeholder={activeTab === 'hotels' ? "Ej: París, Centro" : "Ej: Tokio (HND)"} className="w-full pl-10 p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-medium" value={formData.destination} onChange={(e) => setFormData({...formData, destination: e.target.value})} />
+                    </div>
                 </div>
-            </div>
-            <div className="md:col-span-3">
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">Fecha</label>
-                <input type="date" className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-slate-600 font-medium" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
-            </div>
-            <div className="md:col-span-3">
-              <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl transition flex justify-center items-center gap-2 shadow-lg shadow-blue-200 active:scale-95">
-                {loading ? <span className="animate-spin">⌛</span> : <><Search className="h-5 w-5" /> Buscar Ahorro</>}
-              </button>
+
+                {/* FECHAS (Dinámicas) */}
+                <div className={`grid ${tripType === 'roundtrip' || activeTab === 'hotels' ? 'grid-cols-2' : 'grid-cols-1'} gap-2 ${activeTab === 'flights' ? 'md:col-span-4' : 'md:col-span-5'}`}>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">
+                            {activeTab === 'hotels' ? 'Entrada' : 'Ida'}
+                        </label>
+                        <div className="relative">
+                            <Calendar className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+                            <input type="date" className="w-full pl-10 p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-slate-600 font-medium" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
+                        </div>
+                    </div>
+                    
+                    {(tripType === 'roundtrip' || activeTab === 'hotels') && (
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">
+                                {activeTab === 'hotels' ? 'Salida' : 'Vuelta'}
+                            </label>
+                            <div className="relative">
+                                <Calendar className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+                                <input type="date" className="w-full pl-10 p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-slate-600 font-medium" value={formData.returnDate} onChange={(e) => setFormData({...formData, returnDate: e.target.value})} />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* BOTÓN BUSCAR */}
+                <div className={`${activeTab === 'flights' ? 'md:col-span-2' : 'md:col-span-3'}`}>
+                  <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl transition flex justify-center items-center gap-2 shadow-lg shadow-blue-200 active:scale-95 h-[52px]">
+                    {loading ? <span className="animate-spin">⌛</span> : <><Search className="h-5 w-5" /> Buscar</>}
+                  </button>
+                </div>
             </div>
           </form>
         </div>
@@ -338,7 +404,7 @@ const App = () => {
             </div>
 
             <div className="p-8">
-                {/* Paso 1: CON AFILIACIÓN INTEGRADA */}
+                {/* Paso 1: CON AFILIACIÓN */}
                 <div className="flex gap-5 mb-8 relative">
                     <div className="absolute left-6 top-10 bottom-[-20px] w-0.5 bg-slate-100"></div>
                     <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 font-bold text-xl flex items-center justify-center border border-blue-100 z-10 shadow-sm">1</div>
@@ -348,7 +414,7 @@ const App = () => {
                         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-2">
                             <p className="text-slate-600 text-sm mb-3">Conéctate a un servidor en <strong>{selectedDeal.country}</strong>.</p>
                             
-                            {/* CAJA DE AFILIADO - MODIFICA ESTE LINK */}
+                            {/* ENLACE DE AFILIADO */}
                             <a 
                                 href="https://surfshark.club/friend" 
                                 target="_blank"

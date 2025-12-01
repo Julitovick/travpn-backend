@@ -7,79 +7,43 @@ app.use(cors());
 app.use(express.json());
 
 // ------------------------------------------------------------------
-// TU CLAVE DE RAPIDAPI
-const RAPIDAPI_KEY = 'TU_CLAVE_DE_RAPIDAPI_AQUI'; 
+// CONFIGURACIÓN DE CLAVES API
+// ------------------------------------------------------------------
+// Clave para VUELOS (Skyscanner) - La que me has facilitado
+const SKYSCANNER_API_KEY = '1989077d03mshb8c66c4fa42d362p1f2868jsn997c43a1736d';
+
+// Clave para HOTELES (Booking.com)
+// NOTA: Si te suscribiste con la misma cuenta de RapidAPI, suele ser la misma clave.
+// Si tienes una diferente para Booking, cámbiala aquí.
+const BOOKING_API_KEY = '1989077d03mshb8c66c4fa42d362p1f2868jsn997c43a1736d'; 
 // ------------------------------------------------------------------
 
-// LISTA MASIVA DE 50+ MERCADOS (Para cumplir la promesa)
-const ALL_MARKETS = [
-    // América
-    { code: 'AR', currency: 'ARS', name: 'Argentina' },
-    { code: 'BR', currency: 'BRL', name: 'Brasil' },
-    { code: 'MX', currency: 'MXN', name: 'México' },
-    { code: 'CO', currency: 'COP', name: 'Colombia' },
-    { code: 'CL', currency: 'CLP', name: 'Chile' },
-    { code: 'PE', currency: 'PEN', name: 'Perú' },
-    { code: 'US', currency: 'USD', name: 'EE.UU.' },
-    { code: 'CA', currency: 'CAD', name: 'Canadá' },
-    // Europa (Normalmente más caros, pero útiles para comparar)
+// Hosts de las APIs
+const SKYSCANNER_HOST = 'skyscanner44.p.rapidapi.com';
+const BOOKING_HOST = 'booking-com.p.rapidapi.com';
+
+// Países para comparar vuelos
+const MARKETS = [
     { code: 'ES', currency: 'EUR', name: 'España' },
-    { code: 'GB', currency: 'GBP', name: 'Reino Unido' },
-    { code: 'PL', currency: 'PLN', name: 'Polonia' },
-    { code: 'HU', currency: 'HUF', name: 'Hungría' },
-    { code: 'BG', currency: 'BGN', name: 'Bulgaria' },
-    { code: 'RO', currency: 'RON', name: 'Rumanía' },
-    { code: 'TR', currency: 'TRY', name: 'Turquía' }, // ¡Muy barato!
-    // Asia (Los reyes del ahorro)
-    { code: 'IN', currency: 'INR', name: 'India' },
-    { code: 'ID', currency: 'IDR', name: 'Indonesia' },
-    { code: 'TH', currency: 'THB', name: 'Tailandia' },
-    { code: 'VN', currency: 'VND', name: 'Vietnam' },
-    { code: 'MY', currency: 'MYR', name: 'Malasia' },
-    { code: 'PH', currency: 'PHP', name: 'Filipinas' },
-    { code: 'JP', currency: 'JPY', name: 'Japón' },
-    { code: 'KR', currency: 'KRW', name: 'Corea del Sur' },
-    { code: 'CN', currency: 'CNY', name: 'China' },
-    { code: 'LK', currency: 'LKR', name: 'Sri Lanka' },
-    { code: 'PK', currency: 'PKR', name: 'Pakistán' },
-    { code: 'BD', currency: 'BDT', name: 'Bangladesh' },
-    // África
-    { code: 'EG', currency: 'EGP', name: 'Egipto' },
-    { code: 'ZA', currency: 'ZAR', name: 'Sudáfrica' },
-    { code: 'MA', currency: 'MAD', name: 'Marruecos' },
-    { code: 'NG', currency: 'NGN', name: 'Nigeria' },
-    { code: 'KE', currency: 'KES', name: 'Kenia' },
-    // Oceanía
-    { code: 'AU', currency: 'AUD', name: 'Australia' },
-    { code: 'NZ', currency: 'NZD', name: 'Nueva Zelanda' }
+    { code: 'US', currency: 'USD', name: 'EE.UU.' },
+    { code: 'BR', currency: 'BRL', name: 'Brasil' },
+    { code: 'AR', currency: 'ARS', name: 'Argentina' },
+    { code: 'TR', currency: 'TRY', name: 'Turquía' }
 ];
 
-// --- ENDPOINT DE VUELOS ---
+// --- 1. VUELOS (Usa SKYSCANNER_API_KEY) ---
 app.post('/api/search', async (req, res) => {
     const { origin, destination, date } = req.body; 
-
-    if (!RAPIDAPI_KEY || RAPIDAPI_KEY.includes('TU_CLAVE')) {
-        return res.status(500).json({ error: 'Falta configurar la API KEY en el servidor' });
-    }
+    
+    if (!SKYSCANNER_API_KEY) return res.status(500).json({ error: 'Falta API Key de Vuelos' });
 
     try {
         console.log(`✈️ Buscando vuelos: ${origin} -> ${destination}`);
-
-        // ESTRATEGIA DE AHORRO DE API:
-        // Seleccionamos siempre España (para comparar) + Turquía, Argentina, Brasil, India (los baratos)
-        // + 5 aleatorios del resto del mundo. Total: ~10 peticiones por búsqueda.
-        const mustCheck = ['ES', 'TR', 'AR', 'BR', 'IN', 'TH', 'VN', 'ID'];
-        const randomMarkets = ALL_MARKETS
-            .filter(m => !mustCheck.includes(m.code))
-            .sort(() => 0.5 - Math.random())
-            .slice(0, 5);
         
-        const selectedMarkets = ALL_MARKETS.filter(m => mustCheck.includes(m.code)).concat(randomMarkets);
-
-        const promises = selectedMarkets.map(async (market) => {
+        const promises = MARKETS.map(async (market) => {
             const options = {
                 method: 'GET',
-                url: 'https://skyscanner44.p.rapidapi.com/search',
+                url: `https://${SKYSCANNER_HOST}/search`,
                 params: {
                     adults: '1',
                     origin: origin,
@@ -90,86 +54,114 @@ app.post('/api/search', async (req, res) => {
                     market: market.code
                 },
                 headers: {
-                    'X-RapidAPI-Key': RAPIDAPI_KEY,
-                    'X-RapidAPI-Host': 'skyscanner44.p.rapidapi.com'
+                    'X-RapidAPI-Key': SKYSCANNER_API_KEY, // <--- Clave Específica
+                    'X-RapidAPI-Host': SKYSCANNER_HOST
                 }
             };
 
             try {
                 const response = await axios.request(options);
-                const cheapestBucket = response.data.itineraries?.buckets?.find(b => b.id === 'Cheapest');
-                
-                if (!cheapestBucket || !cheapestBucket.items[0]) return null;
-
-                const item = cheapestBucket.items[0];
-                
-                let airline = "Aerolínea Múltiple";
-                if (item.legs && item.legs[0] && item.legs[0].carriers && item.legs[0].carriers.marketing) {
-                    airline = item.legs[0].carriers.marketing[0].name;
-                }
+                const bucket = response.data.itineraries?.buckets?.find(b => b.id === 'Cheapest');
+                if (!bucket || !bucket.items[0]) return null;
 
                 return {
+                    type: 'flight',
                     country: market.name,
                     flag: market.code, 
-                    price: item.price.raw,
+                    price: bucket.items[0].price.raw,
                     currency: market.currency,
-                    airline: airline
+                    airline: "Ver en web"
                 };
-            } catch (err) {
-                return null; 
-            }
+            } catch (err) { return null; }
         });
 
         const results = await Promise.all(promises);
         res.json(results.filter(r => r !== null));
 
     } catch (error) {
-        console.error('Error general vuelos:', error);
-        res.status(500).json({ error: 'Error interno buscando vuelos' });
+        res.status(500).json({ error: 'Error buscando vuelos' });
     }
 });
 
-// --- ENDPOINT DE HOTELES (Simulado) ---
+// --- 2. HOTELES (Usa BOOKING_API_KEY) ---
 app.post('/api/hotels', async (req, res) => {
-    const { destination } = req.body;
-    // Simulamos búsqueda en 12 mercados clave
-    const marketsSample = ALL_MARKETS.sort(() => 0.5 - Math.random()).slice(0, 12);
+    const { destination, date, returnDate } = req.body;
+    console.log(`🏨 Buscando hoteles (Booking) en: ${destination}`);
 
-    const mockHotels = marketsSample.map(market => {
-        const basePrice = Math.floor(Math.random() * 150) + 50; 
-        const multiplier = ['US','GB','EU','AU'].includes(market.code) ? 1.2 : 0.6;
-        const finalPrice = Math.floor(basePrice * multiplier * (market.code === 'JP' ? 100 : 1));
+    if (!BOOKING_API_KEY) return res.status(500).json({ error: 'Falta API Key de Hoteles' });
 
-        return {
-            country: market.name,
-            flag: market.code,
-            price: finalPrice,
-            currency: market.currency,
-            hotelName: `Hotel ${market.name} Plaza`,
-            stars: Math.floor(Math.random() * 2) + 3 
+    try {
+        // PASO A: Buscar el ID de la ciudad en Booking
+        const locationOptions = {
+            method: 'GET',
+            url: `https://${BOOKING_HOST}/v1/hotels/locations`,
+            params: { name: destination, locale: 'es' },
+            headers: {
+                'X-RapidAPI-Key': BOOKING_API_KEY, // <--- Clave Específica
+                'X-RapidAPI-Host': BOOKING_HOST
+            }
         };
-    });
-    setTimeout(() => res.json(mockHotels.sort((a,b) => a.price - b.price)), 1500);
+
+        const locResponse = await axios.request(locationOptions);
+        
+        const destData = locResponse.data?.find(d => d.dest_type === 'city') || locResponse.data?.[0];
+
+        if (!destData) {
+            return res.json([]); 
+        }
+        
+        const destId = destData.dest_id;
+        const destType = destData.dest_type;
+
+        // PASO B: Buscar hoteles reales usando ese ID
+        const searchOptions = {
+            method: 'GET',
+            url: `https://${BOOKING_HOST}/v1/hotels/search`,
+            params: {
+                checkin_date: date,
+                checkout_date: returnDate,
+                dest_id: destId,
+                dest_type: destType,
+                adults_number: '1',
+                order_by: 'price',
+                filter_by_currency: 'EUR',
+                locale: 'es',
+                units: 'metric',
+                room_number: '1'
+            },
+            headers: {
+                'X-RapidAPI-Key': BOOKING_API_KEY, // <--- Clave Específica
+                'X-RapidAPI-Host': BOOKING_HOST
+            }
+        };
+
+        const hotelResponse = await axios.request(searchOptions);
+        const hotels = hotelResponse.data.result || [];
+
+        // PASO C: Formatear para el Frontend
+        const realHotels = hotels.slice(0, 6).map(h => ({
+            type: 'hotel',
+            country: 'Global', 
+            flag: 'globe',
+            price: h.min_total_price, 
+            currency: 'EUR', 
+            hotelName: h.hotel_name,
+            stars: h.class || 0,
+            image: h.main_photo_url ? h.main_photo_url.replace('square60', 'max500') : 'https://images.unsplash.com/photo-1566073771259-6a8506099945'
+        }));
+
+        res.json(realHotels);
+
+    } catch (error) {
+        console.error("Error API Booking:", error.message);
+        res.json([]); 
+    }
 });
 
-// --- ENDPOINT DE CRUCEROS (Simulado) ---
+// --- 3. CRUCEROS (Redirección Honesta) ---
 app.post('/api/cruises', async (req, res) => {
-    const marketsSample = ALL_MARKETS.sort(() => 0.5 - Math.random()).slice(0, 8);
-    const mockCruises = marketsSample.map(market => {
-        const basePrice = Math.floor(Math.random() * 500) + 300; 
-        const finalPrice = Math.floor(basePrice * (market.code === 'TR' ? 20 : 1)); 
-
-        return {
-            country: market.name,
-            flag: market.code,
-            price: finalPrice,
-            currency: market.currency,
-            cruiseLine: "Ocean " + market.name + " Lines",
-            days: 7
-        };
-    });
-    setTimeout(() => res.json(mockCruises.sort((a,b) => a.price - b.price)), 1500);
+    res.json([]); 
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor TRAVPN v3.0 listo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor con claves separadas listo en puerto ${PORT}`));
