@@ -12,7 +12,7 @@ const EXCHANGE_RATES = {
 const BACKGROUND_IMAGES = [
   'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=2073&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1528164344705-47542687000d?q=80&w=2092&auto=format&fit=crop', // Japón
+  'https://images.unsplash.com/photo-1528164344705-47542687000d?q=80&w=2092&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=2066&auto=format&fit=crop',
 ];
 
@@ -88,6 +88,7 @@ const App = () => {
     } catch (error) {
       console.error("Usando fallback inteligente por error:", error);
       
+      // --- FALLBACK INTELIGENTE (Si falla el servidor, mostramos datos coherentes con TU búsqueda) ---
       const dest = formData.destination; 
       
       const demoData = [
@@ -298,7 +299,7 @@ const App = () => {
                 </div>
             </div>
             <div className="p-8">
-                {/* Paso 1: CON AFILIACIÓN */}
+                {/* Paso 1: CON TU AFILIADO DE NORDVPN */}
                 <div className="flex gap-5 mb-8 relative">
                     <div className="absolute left-6 top-10 bottom-[-20px] w-0.5 bg-slate-100"></div>
                     <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 font-bold text-xl flex items-center justify-center border border-blue-100 z-10 shadow-sm">1</div>
@@ -306,10 +307,17 @@ const App = () => {
                         <h4 className="font-bold text-lg text-slate-800 flex items-center gap-2">Conecta tu VPN</h4>
                         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-2">
                             <p className="text-slate-600 text-sm mb-3">Conéctate a un servidor en <strong>{selectedDeal.country}</strong>.</p>
-                            <a href="https://surfshark.club/friend" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between bg-white border border-blue-200 p-3 rounded-lg hover:shadow-md transition group">
+                            
+                            {/* TU ENLACE DE NORDVPN AQUÍ */}
+                            <a 
+                                href="https://go.nordvpn.net/aff_c?offer_id=15&aff_id=136277&url_id=902" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="flex items-center justify-between bg-white border border-blue-200 p-3 rounded-lg hover:shadow-md transition group"
+                            >
                                 <div className="flex items-center gap-3">
                                     <div className="bg-blue-600 text-white p-1.5 rounded"><Shield className="h-4 w-4"/></div>
-                                    <div><p className="font-bold text-slate-900 text-sm">¿No tienes VPN?</p><p className="text-xs text-green-600 font-bold">Oferta: 82% DTO + Meses Gratis</p></div>
+                                    <div><p className="font-bold text-slate-900 text-sm">¿No tienes VPN?</p><p className="text-xs text-green-600 font-bold">Oferta: 72% DTO en NordVPN</p></div>
                                 </div>
                                 <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600"/>
                             </a>
