@@ -18,27 +18,25 @@ const BOOKING_HOST    = 'booking-com.p.rapidapi.com';
 const CRUISE_HOST     = 'cruise-data.p.rapidapi.com'; 
 // ------------------------------------------------------------------
 
-// MERCADOS REALES A CONSULTAR
-// Limitamos a 4-5 para no agotar tu API Key en una sola búsqueda, 
-// pero estos serán consultados DE VERDAD.
+// MERCADOS REALES A CONSULTAR (5 PAÍSES FIJOS)
+// Cambiado: Rep. Checa -> Turquía
 const TARGET_MARKETS = [
     { code: 'ES', currency: 'EUR', name: 'España', locale: 'es-ES' },
-    { code: 'BR', currency: 'BRL', name: 'Brasil', locale: 'pt-BR' },
-    { code: 'AR', currency: 'ARS', name: 'Argentina', locale: 'es-AR' },
-    { code: 'TR', currency: 'TRY', name: 'Turquía', locale: 'tr-TR' },
-    { code: 'US', currency: 'USD', name: 'EE.UU.', locale: 'en-US' }
+    { code: 'TR', currency: 'TRY', name: 'Turquía', locale: 'tr-TR' }, // ¡Nuevo!
+    { code: 'PL', currency: 'PLN', name: 'Polonia', locale: 'pl-PL' },
+    { code: 'HU', currency: 'HUF', name: 'Hungría', locale: 'hu-HU' },
+    { code: 'BR', currency: 'BRL', name: 'Brasil', locale: 'pt-BR' }
 ];
 
-// --- 1. VUELOS (100% REAL - Múltiples Peticiones) ---
+// --- 1. VUELOS (100% REAL - 5 Peticiones) ---
 app.post('/api/search', async (req, res) => {
     const { origin, destination, date } = req.body; 
     
     if (!SKYSCANNER_API_KEY) return res.status(500).json({ error: 'Falta API Key Vuelos' });
 
     try {
-        console.log(`✈️ Buscando precio real en ${TARGET_MARKETS.length} países para: ${origin}->${destination}`);
+        console.log(`✈️ Buscando vuelos reales en 5 mercados: ${origin}->${destination}`);
         
-        // Lanzamos todas las peticiones a la vez en paralelo
         const promises = TARGET_MARKETS.map(async (market) => {
             const options = {
                 method: 'GET',
@@ -48,7 +46,6 @@ app.post('/api/search', async (req, res) => {
                     origin: origin,
                     destination: destination,
                     departureDate: date,
-                    // AQUÍ ESTÁ LA CLAVE: Pedimos precios como si estuviéramos en ese país
                     currency: market.currency,
                     countryCode: market.code,
                     market: market.code
@@ -63,7 +60,7 @@ app.post('/api/search', async (req, res) => {
                 const response = await axios.request(options);
                 const bucket = response.data.itineraries?.buckets?.find(b => b.id === 'Cheapest');
                 
-                if (!bucket || !bucket.items[0]) return null; // No hay vuelos en este mercado
+                if (!bucket || !bucket.items[0]) return null;
 
                 const flightData = bucket.items[0];
                 let airline = "Ver detalles";
@@ -73,13 +70,11 @@ app.post('/api/search', async (req, res) => {
                     type: 'flight',
                     country: market.name,
                     flag: market.code,
-                    // PRECIO REAL devuelto por la API para ese país
                     price: flightData.price.raw,
                     currency: market.currency,
                     airline: airline
                 };
             } catch (err) {
-                console.error(`Fallo buscando en ${market.name}`);
                 return null;
             }
         });
@@ -87,8 +82,6 @@ app.post('/api/search', async (req, res) => {
         const results = await Promise.all(promises);
         const validResults = results.filter(r => r !== null);
         
-        // Ordenamos del más barato al más caro (normalizando a una moneda común para ordenar sería ideal, 
-        // pero aquí el frontend ya hace una estimación de orden).
         res.json(validResults);
 
     } catch (error) {
@@ -96,13 +89,13 @@ app.post('/api/search', async (req, res) => {
     }
 });
 
-// --- 2. HOTELES (100% REAL - Múltiples Peticiones) ---
+// --- 2. HOTELES (100% REAL - 5 Peticiones) ---
 app.post('/api/hotels', async (req, res) => {
     const { destination, date, returnDate } = req.body;
     console.log(`🏨 Buscando hoteles reales en: ${destination}`);
 
     try {
-        // PASO A: Buscar ID Ciudad (Solo se hace 1 vez)
+        // PASO A: Buscar ID Ciudad
         const locOptions = {
             method: 'GET', url: `https://${BOOKING_HOST}/v1/hotels/locations`,
             params: { name: destination, locale: 'es' },
@@ -113,7 +106,7 @@ app.post('/api/hotels', async (req, res) => {
         
         if (!destData) return res.json([]); 
 
-        // PASO B: Consultar precios en cada mercado REAL
+        // PASO B: Consultar precios en los 5 mercados REALES
         const promises = TARGET_MARKETS.map(async (market) => {
             const searchOptions = {
                 method: 'GET',
@@ -125,9 +118,8 @@ app.post('/api/hotels', async (req, res) => {
                     dest_type: destData.dest_type,
                     adults_number: '1',
                     order_by: 'price',
-                    // Pedimos el precio en la moneda local del país VPN
                     filter_by_currency: market.currency,
-                    locale: 'es', // Idioma de la info (descripciones)
+                    locale: 'es',
                     units: 'metric',
                     room_number: '1'
                 },
@@ -136,7 +128,7 @@ app.post('/api/hotels', async (req, res) => {
 
             try {
                 const hotelRes = await axios.request(searchOptions);
-                const bestHotel = hotelRes.data.result?.[0]; // Cogemos el más barato disponible
+                const bestHotel = hotelRes.data.result?.[0]; 
 
                 if (!bestHotel) return null;
 
@@ -147,9 +139,8 @@ app.post('/api/hotels', async (req, res) => {
                     hotelName: bestHotel.hotel_name,
                     stars: bestHotel.class || 0,
                     image: bestHotel.main_photo_url?.replace('square60', 'max500'),
-                    // PRECIO REAL de Booking para esa moneda
                     price: bestHotel.min_total_price,
-                    currency: market.currency // Debería coincidir con la solicitada
+                    currency: market.currency 
                 };
             } catch (err) { return null; }
         });
@@ -163,13 +154,10 @@ app.post('/api/hotels', async (req, res) => {
     }
 });
 
-// --- 3. CRUCEROS (Sin cambios, API estándar) ---
+// --- 3. CRUCEROS ---
 app.post('/api/cruises', async (req, res) => {
-    const { destination } = req.body;
-    // ... (Mantengo la lógica anterior o simplificada ya que cruceros es muy específico)
-    // Para simplificar y no gastar cuota extra aquí si no es crítico:
-    res.json([]); // O usar el código anterior si quieres mantenerlo
+    res.json([]); 
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor REAL MULTI-MERCADO listo en ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor 5-Mercados (con Turquía) listo en ${PORT}`));

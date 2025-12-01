@@ -5,14 +5,23 @@ import { Search, Plane, MapPin, Globe, Info, X, Hotel, Ship, Shield, CheckCircle
 const API_URL_BASE = 'https://travpn-backend-x82z.onrender.com/api'; 
 
 const EXCHANGE_RATES = {
-  'EUR': 1.0, 'USD': 0.92, 'BRL': 0.18, 'ARS': 0.0011,
-  'INR': 0.011, 'TRY': 0.029, 'JPY': 0.0062, 'MXN': 0.054
+  'EUR': 1.0, 
+  'USD': 0.92, 
+  'BRL': 0.18, 
+  'ARS': 0.0011,
+  'INR': 0.011, 
+  'TRY': 0.029, 
+  'JPY': 0.0062, 
+  'MXN': 0.054,
+  'CZK': 0.039, // Corona Checa
+  'PLN': 0.23,  // Zloty Polaco
+  'HUF': 0.0025 // Florín Húngaro
 };
 
 const BACKGROUND_IMAGES = [
   'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=2073&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1528164344705-47542687000d?q=80&w=2092&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1528164344705-47542687000d?q=80&w=2092&auto=format&fit=crop', 
   'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=2066&auto=format&fit=crop',
 ];
 
@@ -88,31 +97,37 @@ const App = () => {
     } catch (error) {
       console.error("Usando fallback inteligente por error:", error);
       
-      // --- FALLBACK INTELIGENTE (Si falla el servidor, mostramos datos coherentes con TU búsqueda) ---
       const dest = formData.destination; 
       
+      // DATOS DEMO: Turquía + Polonia + Brasil + Hungría + España
       const demoData = [
         { 
-            country: 'Brasil', flag: '🇧🇷', price: 1500, currency: 'BRL', 
-            airline: 'Latam', 
-            hotelName: `Hotel ${dest} Plaza`, 
-            stars: 4, 
+            country: 'Turquía', flag: 'TR', price: 8500, currency: 'TRY', 
+            airline: 'Turkish Airlines', hotelName: `Grand ${dest} Istanbul`, stars: 5, 
             image: `https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=500&q=60`,
             type: activeTab === 'hotels' ? 'hotel' : 'flight'
         },
         { 
-            country: 'Turquía', flag: '🇹🇷', price: 8500, currency: 'TRY', 
-            airline: 'Turkish Airlines', 
-            hotelName: `Grand ${dest} Hotel`, 
-            stars: 5, 
+            country: 'Polonia', flag: 'PL', price: 750, currency: 'PLN', 
+            airline: 'LOT Polish', hotelName: `${dest} Warsaw Inn`, stars: 3, 
+            image: `https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=500&q=60`,
+            type: activeTab === 'hotels' ? 'hotel' : 'flight'
+        },
+        { 
+            country: 'Brasil', flag: 'BR', price: 1500, currency: 'BRL', 
+            airline: 'Latam', hotelName: `Hotel ${dest} Plaza`, stars: 4, 
+            image: `https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=500&q=60`,
+            type: activeTab === 'hotels' ? 'hotel' : 'flight'
+        },
+        { 
+            country: 'Hungría', flag: 'HU', price: 65000, currency: 'HUF', 
+            airline: 'Wizz Air', hotelName: `Grand ${dest} Budapest`, stars: 5, 
             image: `https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=500&q=60`,
             type: activeTab === 'hotels' ? 'hotel' : 'flight'
         },
         { 
-            country: 'España', flag: '🇪🇸', price: 450, currency: 'EUR', 
-            airline: 'Iberia', 
-            hotelName: `${dest} City Center`, 
-            stars: 3, 
+            country: 'España', flag: 'ES', price: 450, currency: 'EUR', 
+            airline: 'Iberia', hotelName: `${dest} City Center`, stars: 3, 
             image: `https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=500&q=60`,
             type: activeTab === 'hotels' ? 'hotel' : 'flight'
         },
@@ -130,9 +145,27 @@ const App = () => {
     <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
       {/* HEADER */}
       <div className="bg-blue-900 text-white pb-64 relative overflow-hidden transition-all duration-1000">
-        <div className="absolute top-4 right-4 z-20 bg-black/30 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/20">
-            <span className="text-xs text-slate-200 uppercase font-semibold">Moneda:</span>
-            <select value={userCurrency} onChange={(e) => setUserCurrency(e.target.value)} className="bg-transparent font-bold text-white outline-none cursor-pointer"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option></select>
+        <div className="absolute top-4 right-4 z-20 flex gap-3">
+            {/* Selector Idioma */}
+            <div className="bg-black/30 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/20 hover:bg-black/40 transition">
+                <Globe className="h-3 w-3 text-slate-300"/>
+                <select 
+                    value={userLanguage} 
+                    onChange={(e) => setUserLanguage(e.target.value)}
+                    className="bg-transparent font-bold text-white text-xs outline-none cursor-pointer uppercase"
+                >
+                    <option value="ES" className="text-slate-900">ES</option>
+                    <option value="EN" className="text-slate-900">EN</option>
+                    <option value="FR" className="text-slate-900">FR</option>
+                    <option value="PT" className="text-slate-900">PT</option>
+                </select>
+            </div>
+
+            {/* Selector Moneda */}
+            <div className="bg-black/30 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/20 hover:bg-black/40 transition">
+                <span className="text-xs text-slate-200 uppercase font-semibold">Moneda:</span>
+                <select value={userCurrency} onChange={(e) => setUserCurrency(e.target.value)} className="bg-transparent font-bold text-white outline-none cursor-pointer"><option value="EUR" className="text-slate-900">EUR (€)</option><option value="USD" className="text-slate-900">USD ($)</option></select>
+            </div>
         </div>
         {bgImage && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${bgImage}')` }} />}
         <div className="absolute inset-0 bg-gradient-to-b from-blue-900/60 via-blue-900/40 to-blue-900/90" />
