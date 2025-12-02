@@ -11,17 +11,18 @@ app.use(express.json());
 // ------------------------------------------------------------------
 const RAPIDAPI_KEY = '1989077d03mshb8c66c4fa42d362p1f2868jsn997c43a1736d';
 
+// HOSTS
 const SKYSCANNER_HOST = 'flights-sky.p.rapidapi.com'; 
 const BOOKING_HOST    = 'booking-com15.p.rapidapi.com'; 
 const CRUISE_HOST     = 'cruisewave-api.p.rapidapi.com'; 
 // ------------------------------------------------------------------
 
 const TARGET_MARKETS = [
-    { code: 'ES', currency: 'EUR', name: 'España' },
-    { code: 'CZ', currency: 'CZK', name: 'Rep. Checa' },
-    { code: 'PL', currency: 'PLN', name: 'Polonia' },
-    { code: 'HU', currency: 'HUF', name: 'Hungría' },
-    { code: 'BR', currency: 'BRL', name: 'Brasil' }
+    { code: 'BG', currency: 'BGN', name: 'Bulgaria', locale: 'bg-BG' },
+    { code: 'IN', currency: 'INR', name: 'India', locale: 'en-IN' },
+    { code: 'MX', currency: 'MXN', name: 'México', locale: 'es-MX' },
+    { code: 'ES', currency: 'EUR', name: 'España', locale: 'es-ES' },
+    { code: 'TH', currency: 'THB', name: 'Tailandia', locale: 'th-TH' }
 ];
 
 // Ruta de salud
@@ -29,13 +30,13 @@ app.get('/', (req, res) => {
     res.send('Servidor TRAVPN funcionando correctamente.');
 });
 
-// --- 1. VUELOS (Flights Sky) ---
+// --- 1. VUELOS (Top 5 por País) ---
 app.post('/api/search', async (req, res) => {
     const { origin, destination, date, passengers, directFlights } = req.body; 
     const p = passengers || { adults: 1, children: 0, infants: 0 };
     
     try {
-        console.log('Buscando vuelos: ' + origin + ' a ' + destination);
+        console.log('Buscando vuelos (Top 5/país): ' + origin + ' a ' + destination);
         
         const promises = TARGET_MARKETS.map(async (market) => {
             const options = {
@@ -58,41 +59,50 @@ app.post('/api/search', async (req, res) => {
             try {
                 const response = await axios.request(options);
                 const data = response.data.data || {};
-                const itineraries = data.itineraries || [];
+                let itineraries = data.itineraries || [];
                 
-                if (itineraries.length === 0) return null;
+                // Filtro opcional de vuelos directos
+                if (directFlights) {
+                    itineraries = itineraries.filter(it => 
+                        it.legs && it.legs.every(leg => leg.stopCount === 0)
+                    );
+                }
 
-                const bestFlight = itineraries[0];
-                return {
+                if (itineraries.length === 0) return [];
+
+                // AQUÍ ESTÁ EL CAMBIO: Devolvemos los 5 primeros (slice 0,5)
+                return itineraries.slice(0, 5).map(flight => ({
                     type: 'flight',
                     country: market.name,
                     flag: market.code,
-                    price: bestFlight.price?.raw || bestFlight.price?.amount || 0,
+                    price: flight.price?.raw || flight.price?.amount || 0,
                     currency: market.currency,
-                    airline: bestFlight.legs?.[0]?.carriers?.marketing?.[0]?.name || 'Ver detalles'
-                };
-            } catch (err) { return null; }
+                    airline: flight.legs?.[0]?.carriers?.marketing?.[0]?.name || 'Ver detalles'
+                }));
+
+            } catch (err) {
+                return [];
+            }
         });
 
         const results = await Promise.all(promises);
-        const validResults = results.filter(r => r !== null);
-        res.json(validResults);
+        // Aplanamos el array de arrays para tener una lista única
+        res.json(results.flat());
 
     } catch (error) {
-        console.error('Error general vuelos:', error.message);
+        console.error('Error vuelos:', error.message);
         res.json([]); 
     }
 });
 
-// --- 2. HOTELES (Booking-com15) ---
+// --- 2. HOTELES (Top 5 por País) ---
 app.post('/api/hotels', async (req, res) => {
     const { destination, date, returnDate, guests } = req.body;
     const g = guests || { adults: 2 };
     
     try {
-        console.log('Buscando hoteles (V15) en: ' + destination);
+        console.log('Buscando hoteles (Top 5/país) en: ' + destination);
 
-        // PASO A: Buscar ID
         const locOptions = {
             method: 'GET',
             url: 'https://' + BOOKING_HOST + '/api/v1/hotels/searchDestination',
@@ -101,18 +111,13 @@ app.post('/api/hotels', async (req, res) => {
         };
 
         const locRes = await axios.request(locOptions);
-        const data = locRes.data.data || locRes.data || [];
-        const firstResult = data[0];
+        const firstResult = locRes.data?.data?.[0] || locRes.data?.[0];
         
-        if (!firstResult || !firstResult.dest_id) {
-            console.log('Ciudad no encontrada en Booking');
-            return res.json([]); 
-        }
+        if (!firstResult || !firstResult.dest_id) return res.json([]); 
         
         const destId = firstResult.dest_id;
         const searchType = firstResult.search_type;
 
-        // PASO B: Buscar Precios
         const promises = TARGET_MARKETS.map(async (market) => {
             const searchOptions = {
                 method: 'GET',
@@ -133,39 +138,43 @@ app.post('/api/hotels', async (req, res) => {
             try {
                 const hotelRes = await axios.request(searchOptions);
                 const hotelsData = hotelRes.data.data?.hotels || hotelRes.data.data || [];
-                const bestHotelWrapper = hotelsData[0]; 
-
-                if (!bestHotelWrapper) return null;
                 
-                const h = bestHotelWrapper.property || bestHotelWrapper;
+                if (hotelsData.length === 0) return [];
 
-                return {
-                    type: 'hotel',
-                    country: market.name,
-                    flag: market.code,
-                    hotelName: h.name || 'Hotel sin nombre',
-                    stars: h.qualityClass || h.reviewScore || 3,
-                    image: h.photoUrls?.[0] || h.mainPhotoUrl || null,
-                    price: h.priceBreakdown?.grossPrice?.value || h.price?.lead?.amount || 0,
-                    currency: market.currency 
-                };
-            } catch (err) { return null; }
+                // AQUÍ ESTÁ EL CAMBIO: Devolvemos los 5 primeros
+                return hotelsData.slice(0, 5).map(wrapper => {
+                    const h = wrapper.property || wrapper;
+                    return {
+                        type: 'hotel',
+                        country: market.name,
+                        flag: market.code,
+                        hotelName: h.name || 'Hotel sin nombre',
+                        stars: h.qualityClass || h.reviewScore || 3,
+                        image: h.photoUrls?.[0] || h.mainPhotoUrl || null,
+                        price: h.priceBreakdown?.grossPrice?.value || h.price?.lead?.amount || 0,
+                        currency: market.currency 
+                    };
+                });
+
+            } catch (err) { return []; }
         });
 
         const results = await Promise.all(promises);
-        res.json(results.filter(r => r !== null));
+        res.json(results.flat());
 
     } catch (error) {
-        console.error('Error general hoteles:', error.message);
+        console.error('Error hoteles:', error.message);
         res.json([]);
     }
 });
 
-// --- 3. CRUCEROS ---
+// --- 3. CRUCEROS (Top 5 por País) ---
 app.post('/api/cruises', async (req, res) => {
     const { destination } = req.body;
     try {
         console.log('Buscando cruceros: ' + destination);
+        
+        // 1. Obtenemos una lista REAL de cruceros desde la API
         const options = {
             method: 'GET',
             url: 'https://' + CRUISE_HOST + '/cruises/search', 
@@ -173,35 +182,47 @@ app.post('/api/cruises', async (req, res) => {
             headers: { 'X-RapidAPI-Key': RAPIDAPI_KEY, 'X-RapidAPI-Host': CRUISE_HOST }
         };
 
-        let basePrice = 500;
-        let cruiseName = 'Crucero por ' + destination;
-        let cruiseLine = 'Royal Caribbean';
-
+        let realCruises = [];
         try {
             const response = await axios.request(options);
             const items = response.data.data || response.data;
+            // Cogemos hasta 5 cruceros diferentes reales
             if (items && items.length > 0) {
-                const real = items[0];
-                basePrice = real.price?.total || real.price || 500;
-                cruiseName = real.name || real.title || cruiseName;
-                cruiseLine = real.line?.name || cruiseLine;
+                realCruises = items.slice(0, 5);
             }
         } catch (e) { }
 
-        const rates = { 'EUR': 1, 'BRL': 6.1, 'TRY': 35.5, 'ARS': 1100.0, 'USD': 1.08, 'CZK': 25.3, 'PLN': 4.3, 'HUF': 395.0 };
-        const results = TARGET_MARKETS.map(market => {
+        // Si no hay cruceros reales, usamos uno base de seguridad
+        if (realCruises.length === 0) {
+            realCruises = [{ title: 'Crucero ' + destination, price: 500, line: { name: 'Royal Caribbean' } }];
+        }
+
+        // 2. Para cada país, calculamos el precio de esos 5 cruceros
+        const rates = { 'EUR': 1, 'BGN': 1.95, 'INR': 90.5, 'MXN': 18.2, 'THB': 39.5, 'USD': 1.08 };
+        
+        const resultsArrays = TARGET_MARKETS.map(market => {
             const rate = rates[market.currency] || 1;
             const savings = market.code !== 'ES' ? (0.92 - Math.random() * 0.12) : 1;
-            return {
-                type: 'cruise', country: market.name, flag: market.code,
-                cruiseLine: cruiseLine, cruiseName: cruiseName,
-                price: Math.floor(basePrice * rate * savings),
-                currency: market.currency
-            };
+
+            // Mapeamos los 5 cruceros para ESTE país
+            return realCruises.map(cruise => {
+                const basePrice = cruise.price?.total || cruise.price || cruise.minPrice || 500;
+                return {
+                    type: 'cruise',
+                    country: market.name,
+                    flag: market.code,
+                    cruiseLine: cruise.line?.name || cruise.cruiseLine || 'Naviera',
+                    cruiseName: cruise.title || cruise.name,
+                    price: Math.floor(basePrice * rate * savings),
+                    currency: market.currency
+                };
+            });
         });
-        res.json(results);
+
+        res.json(resultsArrays.flat());
+
     } catch (error) { res.json([]); }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Servidor listo en puerto ' + PORT));
+app.listen(PORT, () => console.log('Servidor Multi-Resultados listo en ' + PORT));

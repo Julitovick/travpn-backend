@@ -8,7 +8,8 @@ const EXCHANGE_RATES = {
   'EUR': 1.0, 'USD': 0.92, 'BRL': 0.18, 'ARS': 0.0011, 'INR': 0.011, 'TRY': 0.029, 
   'JPY': 0.0062, 'MXN': 0.054, 'CZK': 0.039, 'PLN': 0.23, 'HUF': 0.0025,
   'COP': 0.00024, 'CLP': 0.0010, 'PEN': 0.25, 'IDR': 0.000060, 'THB': 0.026, 
-  'VND': 0.000038, 'EGP': 0.020, 'ZAR': 0.050, 'MYR': 0.20, 'RON': 0.20, 'BGN': 0.51
+  'VND': 0.000038, 'EGP': 0.020, 'ZAR': 0.050, 'MYR': 0.20, 'RON': 0.20, 
+  'BGN': 0.51, // Bulgaria
 };
 
 // --- BASE DE DATOS DE AEROPUERTOS OPTIMIZADA ---
@@ -65,7 +66,8 @@ const AIRPORTS = [
   {city:"Seúl",code:"ICN",country:"Corea del Sur"},{city:"Bali",code:"DPS",country:"Indonesia"},
   {city:"Dubái",code:"DXB",country:"EAU"},{city:"Doha",code:"DOH",country:"Catar"},
   {city:"Sídney",code:"SYD",country:"Australia"},{city:"Melbourne",code:"MEL",country:"Australia"},
-  {city:"El Cairo",code:"CAI",country:"Egipto"},{city:"Marrakech",code:"RAK",country:"Marruecos"}
+  {city:"El Cairo",code:"CAI",country:"Egipto"},{city:"Marrakech",code:"RAK",country:"Marruecos"},
+  {city:"Sofia",code:"SOF",country:"Bulgaria"},{city:"Bombay",code:"BOM",country:"India"},{city:"Nueva Delhi",code:"DEL",country:"India"}
 ];
 
 const BACKGROUND_IMAGES = [
@@ -206,7 +208,17 @@ const App = () => {
       }
     } catch (error) {
       console.error(error);
-      setErrorMsg("El servidor de búsqueda no responde. Verifica tu conexión.");
+      // --- FALLBACK DEMO CON LOS NUEVOS PAÍSES ---
+      const dest = formData.destination;
+      const demoData = [
+        { country: 'Bulgaria', flag: 'BG', price: 1400, currency: 'BGN', airline: 'Bulgaria Air', hotelName: `Hotel ${dest} Sofia`, stars: 4, image: `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
+        { country: 'India', flag: 'IN', price: 65000, currency: 'INR', airline: 'Air India', hotelName: `${dest} Palace`, stars: 5, image: `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
+        { country: 'México', flag: 'MX', price: 15500, currency: 'MXN', airline: 'Aeroméxico', hotelName: `Gran Hotel ${dest}`, stars: 4, image: `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
+        { country: 'Tailandia', flag: 'TH', price: 28000, currency: 'THB', airline: 'Thai Airways', hotelName: `${dest} Resort`, stars: 5, image: `https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
+        { country: 'España', flag: 'ES', price: 450, currency: 'EUR', airline: 'Iberia', hotelName: `${dest} Centro`, stars: 3, image: `https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
+      ];
+      setTimeout(() => { setResults(demoData); setLoading(false); }, 1500);
+      return;
     } finally { setLoading(false); }
   };
 
