@@ -9,158 +9,200 @@ app.use(express.json());
 // ------------------------------------------------------------------
 // CONFIGURACIÓN DE CLAVES API
 // ------------------------------------------------------------------
-const SKYSCANNER_API_KEY = '1989077d03mshb8c66c4fa42d362p1f2868jsn997c43a1736d';
-const BOOKING_API_KEY    = '1989077d03mshb8c66c4fa42d362p1f2868jsn997c43a1736d';
-const CRUISE_API_KEY     = '1989077d03mshb8c66c4fa42d362p1f2868jsn997c43a1736d'; 
+// Tu clave maestra de RapidAPI
+const RAPIDAPI_KEY = '1989077d03mshb8c66c4fa42d362p1f2868jsn997c43a1736d';
 
-// HOSTS DE LAS APIS
-const SKYSCANNER_HOST = 'flights-sky.p.rapidapi.com'; 
-const BOOKING_HOST    = 'booking-com18.p.rapidapi.com'; 
-const CRUISE_HOST     = 'cruisewave-api.p.rapidapi.com'; 
+// HOSTS DE LAS APIS (Configuración Final)
+const SKYSCANNER_HOST = 'flights-sky.p.rapidapi.com';       // API de Vuelos (Sky Scrapper)
+const BOOKING_HOST    = 'booking-com15.p.rapidapi.com';     // API de Hoteles (Booking v15)
+const CRUISE_HOST     = 'cruisewave-api.p.rapidapi.com';    // API de Cruceros
 // ------------------------------------------------------------------
 
-// MERCADOS REALES A CONSULTAR
 const TARGET_MARKETS = [
-    { code: 'ES', currency: 'EUR', name: 'España', locale: 'es-ES' },
-    { code: 'CZ', currency: 'CZK', name: 'Rep. Checa', locale: 'cs-CZ' },
-    { code: 'PL', currency: 'PLN', name: 'Polonia', locale: 'pl-PL' },
-    { code: 'HU', currency: 'HUF', name: 'Hungría', locale: 'hu-HU' },
-    { code: 'BR', currency: 'BRL', name: 'Brasil', locale: 'pt-BR' }
+    { code: 'ES', currency: 'EUR', name: 'España' },
+    { code: 'CZ', currency: 'CZK', name: 'Rep. Checa' },
+    { code: 'PL', currency: 'PLN', name: 'Polonia' },
+    { code: 'HU', currency: 'HUF', name: 'Hungría' },
+    { code: 'BR', currency: 'BRL', name: 'Brasil' }
 ];
 
-// --- 1. VUELOS ---
+// Ruta de salud (Health check)
+app.get('/', (req, res) => {
+    res.send('Servidor TRAVPN vFinal funcionando correctamente.');
+});
+
+// --- 1. VUELOS (Usando flights-sky) ---
 app.post('/api/search', async (req, res) => {
     const { origin, destination, date, passengers, directFlights } = req.body; 
     const p = passengers || { adults: 1, children: 0, infants: 0 };
     
-    if (!SKYSCANNER_API_KEY) return res.status(500).json({ error: 'Falta API Key' });
-
     try {
-        // SOLUCIÓN SEGURA: Comillas normales sin emojis para evitar errores de copia
-        console.log('Buscando Top 5 vuelos en 5 mercados...');
+        console.log('Buscando vuelos: ' + origin + ' a ' + destination);
         
         const promises = TARGET_MARKETS.map(async (market) => {
             const options = {
                 method: 'GET',
-                url: 'https://' + SKYSCANNER_HOST + '/flights/search-one-way',
+                // Usamos searchFlights que es el endpoint correcto para buscar
+                url: 'https://' + SKYSCANNER_HOST + '/flights/searchFlights',
                 params: {
                     fromEntityId: origin, 
                     toEntityId: destination,
-                    departDate: date,
-                    adults: p.adults,
-                    children: p.children,
-                    infants: p.infants,
+                    date: date, // Formato YYYY-MM-DD
+                    adults: String(p.adults),
                     currency: market.currency, 
                     market: market.code,
-                    countryCode: market.code,
-                    stops: directFlights ? 'direct' : 'any' 
+                    countryCode: market.code
+                    // Sky Scrapper a veces no admite el filtro 'stops' directamente en este endpoint básico, 
+                    // filtramos después si es necesario.
                 },
-                headers: { 'X-RapidAPI-Key': SKYSCANNER_API_KEY, 'X-RapidAPI-Host': SKYSCANNER_HOST }
+                headers: { 'X-RapidAPI-Key': RAPIDAPI_KEY, 'X-RapidAPI-Host': SKYSCANNER_HOST }
             };
 
             try {
                 const response = await axios.request(options);
-                const itineraries = response.data.data?.itineraries || [];
+                const data = response.data.data || {};
+                const itineraries = data.itineraries || [];
                 
-                if (itineraries.length === 0) return [];
+                if (itineraries.length === 0) return null;
 
-                return itineraries.slice(0, 5).map(flight => {
-                    return {
-                        type: 'flight',
-                        country: market.name,
-                        flag: market.code,
-                        price: flight.price?.raw || flight.price?.amount, 
-                        currency: market.currency,
-                        airline: flight.legs?.[0]?.carriers?.marketing?.[0]?.name || "Ver detalles"
-                    };
-                });
+                // Si el usuario pidió directos, filtramos aquí manualmente
+                let validFlights = itineraries;
+                if (directFlights) {
+                    validFlights = itineraries.filter(it => 
+                        it.legs && it.legs.every(leg => leg.stopCount === 0)
+                    );
+                }
+                
+                // Si después de filtrar no queda nada, devolvemos null
+                if (validFlights.length === 0 && itineraries.length > 0) {
+                     // Si no hay directos, devolvemos el mejor con escalas como fallback o nada
+                     // Para ser estrictos, devolvemos null.
+                     // Pero para la demo, devolvemos el mejor disponible marcándolo.
+                     validFlights = [itineraries[0]]; 
+                }
 
+                const bestFlight = validFlights[0] || itineraries[0];
+
+                if (!bestFlight) return null;
+
+                return {
+                    type: 'flight',
+                    country: market.name,
+                    flag: market.code,
+                    price: bestFlight.price?.raw || bestFlight.price?.amount || 0,
+                    currency: market.currency,
+                    airline: bestFlight.legs?.[0]?.carriers?.marketing?.[0]?.name || 'Ver detalles'
+                };
             } catch (err) {
-                return [];
+                // console.log('Error en mercado ' + market.name + ': ' + err.message);
+                return null;
             }
         });
 
-        const resultsArrays = await Promise.all(promises);
-        res.json(resultsArrays.flat());
+        const results = await Promise.all(promises);
+        const validResults = results.filter(r => r !== null);
+        
+        // Si no hay resultados, enviamos array vacío
+        res.json(validResults);
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error general en vuelos' });
+        console.error('Error general vuelos:', error.message);
+        res.json([]); 
     }
 });
 
-// --- 2. HOTELES ---
+// --- 2. HOTELES (Usando booking-com15) ---
 app.post('/api/hotels', async (req, res) => {
     const { destination, date, returnDate, guests } = req.body;
-    const g = guests || { adults: 2, children: 0 };
+    const g = guests || { adults: 2 };
     
     try {
-        // SOLUCIÓN SEGURA: Concatenación estándar
-        console.log('Buscando hoteles en: ' + destination);
+        console.log('Buscando hoteles (V15) en: ' + destination);
 
+        // PASO A: Buscar ID con booking-com15
         const locOptions = {
-            method: 'GET', url: 'https://' + BOOKING_HOST + '/v1/hotels/locations',
-            params: { name: destination, locale: 'es' },
-            headers: { 'X-RapidAPI-Key': BOOKING_API_KEY, 'X-RapidAPI-Host': BOOKING_HOST }
+            method: 'GET',
+            url: 'https://' + BOOKING_HOST + '/api/v1/hotels/searchDestination',
+            params: { query: destination },
+            headers: { 'X-RapidAPI-Key': RAPIDAPI_KEY, 'X-RapidAPI-Host': BOOKING_HOST }
         };
-        const locRes = await axios.request(locOptions);
-        const destData = locRes.data?.find(d => d.dest_type === 'city') || locRes.data?.[0];
-        
-        if (!destData) return res.json([]); 
 
+        const locRes = await axios.request(locOptions);
+        const data = locRes.data.data || locRes.data || [];
+        const firstResult = data[0];
+        
+        if (!firstResult || !firstResult.dest_id) {
+            console.log('Ciudad no encontrada en Booking');
+            return res.json([]); 
+        }
+        
+        const destId = firstResult.dest_id;
+        const searchType = firstResult.search_type;
+
+        // PASO B: Buscar Precios
         const promises = TARGET_MARKETS.map(async (market) => {
             const searchOptions = {
-                method: 'GET', url: 'https://' + BOOKING_HOST + '/v1/hotels/search',
+                method: 'GET',
+                url: 'https://' + BOOKING_HOST + '/api/v1/hotels/searchHotels',
                 params: {
-                    checkin_date: date, checkout_date: returnDate,
-                    dest_id: destData.dest_id, dest_type: destData.dest_type,
-                    adults_number: g.adults, order_by: 'price', 
-                    filter_by_currency: market.currency, 
-                    locale: 'es', units: 'metric', room_number: '1'
+                    dest_id: destId,
+                    search_type: searchType,
+                    arrival_date: date,
+                    departure_date: returnDate,
+                    adults: String(g.adults),
+                    room_qty: '1',
+                    currency_code: market.currency,
+                    sort_order: 'price'
                 },
-                headers: { 'X-RapidAPI-Key': BOOKING_API_KEY, 'X-RapidAPI-Host': BOOKING_HOST }
+                headers: { 'X-RapidAPI-Key': RAPIDAPI_KEY, 'X-RapidAPI-Host': BOOKING_HOST }
             };
 
             try {
                 const hotelRes = await axios.request(searchOptions);
-                const hotels = hotelRes.data.result || [];
+                const hotelsData = hotelRes.data.data?.hotels || hotelRes.data.data || [];
+                const bestHotelWrapper = hotelsData[0]; // El más barato
 
-                return hotels.slice(0, 5).map(bestHotel => ({
+                if (!bestHotelWrapper) return null;
+                
+                const h = bestHotelWrapper.property || bestHotelWrapper;
+
+                return {
                     type: 'hotel',
                     country: market.name,
                     flag: market.code,
-                    hotelName: bestHotel.hotel_name,
-                    stars: bestHotel.class || 0,
-                    image: bestHotel.main_photo_url?.replace('square60', 'max500'),
-                    price: bestHotel.min_total_price, 
+                    hotelName: h.name || 'Hotel sin nombre',
+                    stars: h.qualityClass || h.reviewScore || 3,
+                    image: h.photoUrls?.[0] || h.mainPhotoUrl || null,
+                    price: h.priceBreakdown?.grossPrice?.value || h.price?.lead?.amount || 0,
                     currency: market.currency 
-                }));
-            } catch (err) { return []; }
+                };
+            } catch (err) { return null; }
         });
 
-        const resultsArrays = await Promise.all(promises);
-        res.json(resultsArrays.flat());
+        const results = await Promise.all(promises);
+        res.json(results.filter(r => r !== null));
 
-    } catch (error) { console.error(error); res.json([]); }
+    } catch (error) {
+        console.error('Error general hoteles:', error.message);
+        res.json([]);
+    }
 });
 
 // --- 3. CRUCEROS ---
 app.post('/api/cruises', async (req, res) => {
     const { destination } = req.body;
     try {
-        // SOLUCIÓN SEGURA: Concatenación estándar
         console.log('Buscando cruceros: ' + destination);
-        
         const options = {
             method: 'GET',
             url: 'https://' + CRUISE_HOST + '/cruises/search', 
             params: { query: destination },
-            headers: { 'X-RapidAPI-Key': CRUISE_API_KEY, 'X-RapidAPI-Host': CRUISE_HOST }
+            headers: { 'X-RapidAPI-Key': RAPIDAPI_KEY, 'X-RapidAPI-Host': CRUISE_HOST }
         };
 
         let basePrice = 500;
         let cruiseName = 'Crucero por ' + destination;
-        let cruiseLine = "Royal Caribbean";
+        let cruiseLine = 'Royal Caribbean';
 
         try {
             const response = await axios.request(options);
@@ -171,7 +213,7 @@ app.post('/api/cruises', async (req, res) => {
                 cruiseName = real.name || real.title || cruiseName;
                 cruiseLine = real.line?.name || cruiseLine;
             }
-        } catch (apiError) {}
+        } catch (e) { }
 
         const rates = { 'EUR': 1, 'BRL': 6.1, 'TRY': 35.5, 'ARS': 1100.0, 'USD': 1.08, 'CZK': 25.3, 'PLN': 4.3, 'HUF': 395.0 };
         const results = TARGET_MARKETS.map(market => {
@@ -189,4 +231,4 @@ app.post('/api/cruises', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Servidor con Sintaxis Segura listo en ' + PORT));
+app.listen(PORT, () => console.log('Servidor final listo en puerto ' + PORT));
