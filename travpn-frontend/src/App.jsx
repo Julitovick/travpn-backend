@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Plane, MapPin, Globe, Info, X, Hotel, Ship, Shield, CheckCircle, ExternalLink, AlertTriangle, EyeOff, CreditCard, Calendar, Lock, Users, ChevronDown, Plus, Minus, ChevronRight, Check } from 'lucide-react';
 
-// ✅ URL ACTUALIZADA CON LA TUYA
+// ✅ URL DE TU BACKEND
 const API_URL_BASE = 'https://travpn-backend.onrender.com/api'; 
 
 const EXCHANGE_RATES = {
@@ -9,12 +9,315 @@ const EXCHANGE_RATES = {
   'JPY': 0.0062, 'MXN': 0.054, 'CZK': 0.039, 'PLN': 0.23, 'HUF': 0.0025,
   'COP': 0.00024, 'CLP': 0.0010, 'PEN': 0.25, 'IDR': 0.000060, 'THB': 0.026, 
   'VND': 0.000038, 'EGP': 0.020, 'ZAR': 0.050, 'MYR': 0.20, 'RON': 0.20, 
-  'BGN': 0.51, // Bulgaria
+  'BGN': 0.51, 
 };
 
-// --- BASE DE DATOS DE AEROPUERTOS OPTIMIZADA ---
+// --- DICCIONARIO DE TRADUCCIONES ---
+const TRANSLATIONS = {
+  ES: {
+    searching_badge: "Buscando en 50+ países reales 🌍",
+    hero_title_1: "Ubicación virtual.",
+    hero_title_2: "Ahorro real.",
+    hero_subtitle: "Las aerolíneas cambian los precios según tu ubicación. Nosotros te decimos desde dónde conectarte para pagar menos.",
+    tab_flights: "Vuelos",
+    tab_hotels: "Hoteles",
+    tab_cruises: "Cruceros",
+    label_roundtrip: "Ida y vuelta",
+    label_oneway: "Solo ida",
+    label_direct: "Solo vuelos directos",
+    label_origin: "Origen",
+    label_destination: "Destino",
+    label_date_start: "Ida",
+    label_date_end: "Vuelta",
+    label_checkin: "Entrada",
+    label_checkout: "Salida",
+    label_passengers: "Pasajeros",
+    label_guests: "Huéspedes",
+    btn_search: "Buscar Ahorro Real",
+    btn_loading: "Buscando en tiempo real... Esto puede tardar unos segundos 🚀",
+    error_no_results: "No se encontraron resultados disponibles en este momento para las fechas seleccionadas.",
+    error_server: "El servidor de búsqueda no responde. Verifica tu conexión.",
+    result_title: "Resultados para",
+    result_best_option: "Mejor Opción",
+    result_vpn: "VPN:",
+    result_pay_here: "Pagar desde aquí",
+    result_trick: "Truco",
+    magic_title: "¿Cómo funciona la magia?",
+    magic_subtitle: "Es simple: las webs de viajes te cobran más si detectan que tienes dinero. Nosotros te enseñamos a parecer un local.",
+    step_1_title: "1. Escaneo Global",
+    step_1_desc: "Rastreamos precios en tiempo real en más de 50 países.",
+    step_2_title: "2. Selección de IP",
+    step_2_desc: "Te decimos qué país elegir para pagar menos impuestos y divisa.",
+    step_3_title: "3. Ahorro Directo",
+    step_3_desc: "Activas tu VPN y compras el billete al precio local.",
+    modal_title: "Misión:",
+    modal_subtitle: "Sigue estos 3 pasos para desbloquear el precio.",
+    modal_step_1: "Conecta tu VPN",
+    modal_step_1_desc: "Conéctate a un servidor en",
+    modal_vpn_offer: "¿No tienes VPN?",
+    modal_vpn_deal: "Oferta: 72% DTO en NordVPN",
+    modal_step_2: "Abre Incógnito",
+    modal_step_2_desc: "Usa Ctrl + Shift + N. Es vital para limpiar cookies.",
+    modal_step_3: "Paga en local",
+    modal_warning: "⚠️ Importante:",
+    modal_warning_desc: "Paga siempre en la moneda local. No dejes que la web convierta a tu moneda.",
+    modal_btn_go: "Ir a la web de compra",
+    adults: "Adultos",
+    children: "Niños",
+    infants: "Bebés",
+    traveler: "Viajero",
+    travelers: "Viajeros",
+    guest: "Huésped",
+    guests: "Huéspedes",
+    age_adult: "12+ años",
+    age_child: "2-11 años",
+    age_infant: "< 2 años",
+    footer_text: "El comparador inteligente que viaja contigo."
+  },
+  EN: {
+    searching_badge: "Searching in 50+ real countries 🌍",
+    hero_title_1: "Virtual location.",
+    hero_title_2: "Real savings.",
+    hero_subtitle: "Airlines change prices based on your location. We tell you where to connect from to pay less.",
+    tab_flights: "Flights",
+    tab_hotels: "Hotels",
+    tab_cruises: "Cruises",
+    label_roundtrip: "Roundtrip",
+    label_oneway: "One way",
+    label_direct: "Direct flights only",
+    label_origin: "Origin",
+    label_destination: "Destination",
+    label_date_start: "Depart",
+    label_date_end: "Return",
+    label_checkin: "Check-in",
+    label_checkout: "Check-out",
+    label_passengers: "Passengers",
+    label_guests: "Guests",
+    btn_search: "Search Real Savings",
+    btn_loading: "Searching in real time... This may take a few seconds 🚀",
+    error_no_results: "No results found at this time for the selected dates.",
+    error_server: "Search server not responding. Check your connection.",
+    result_title: "Results for",
+    result_best_option: "Best Option",
+    result_vpn: "VPN:",
+    result_pay_here: "Pay from here",
+    result_trick: "Trick",
+    magic_title: "How does the magic work?",
+    magic_subtitle: "It's simple: travel sites charge you more if they detect you have money. We teach you to look like a local.",
+    step_1_title: "1. Global Scan",
+    step_1_desc: "We track real-time prices in over 50 countries.",
+    step_2_title: "2. IP Selection",
+    step_2_desc: "We tell you which country to choose to pay less taxes and currency fees.",
+    step_3_title: "3. Direct Savings",
+    step_3_desc: "Activate your VPN and buy the ticket at the local price.",
+    modal_title: "Mission:",
+    modal_subtitle: "Follow these 3 steps to unlock the price.",
+    modal_step_1: "Connect your VPN",
+    modal_step_1_desc: "Connect to a server in",
+    modal_vpn_offer: "Don't have a VPN?",
+    modal_vpn_deal: "Offer: 72% OFF at NordVPN",
+    modal_step_2: "Open Incognito",
+    modal_step_2_desc: "Use Ctrl + Shift + N. Vital to clear cookies.",
+    modal_step_3: "Pay local",
+    modal_warning: "⚠️ Important:",
+    modal_warning_desc: "Always pay in the local currency. Don't let the site convert to your currency.",
+    modal_btn_go: "Go to booking site",
+    adults: "Adults",
+    children: "Children",
+    infants: "Infants",
+    traveler: "Traveler",
+    travelers: "Travelers",
+    guest: "Guest",
+    guests: "Guests",
+    age_adult: "12+ years",
+    age_child: "2-11 years",
+    age_infant: "< 2 years",
+    footer_text: "The smart comparator that travels with you."
+  },
+  DE: {
+    searching_badge: "Suche in 50+ echten Ländern 🌍",
+    hero_title_1: "Virtueller Standort.",
+    hero_title_2: "Echte Ersparnis.",
+    hero_subtitle: "Fluggesellschaften ändern Preise basierend auf Ihrem Standort. Wir sagen Ihnen, wo Sie sich verbinden müssen, um weniger zu zahlen.",
+    tab_flights: "Flüge",
+    tab_hotels: "Hotels",
+    tab_cruises: "Kreuzfahrten",
+    label_roundtrip: "Hin- und Rückflug",
+    label_oneway: "Hinflug",
+    label_direct: "Nur Direktflüge",
+    label_origin: "Herkunft",
+    label_destination: "Ziel",
+    label_date_start: "Abflug",
+    label_date_end: "Rückflug",
+    label_checkin: "Anreise",
+    label_checkout: "Abreise",
+    label_passengers: "Passagiere",
+    label_guests: "Gäste",
+    btn_search: "Echte Ersparnisse suchen",
+    btn_loading: "Suche in Echtzeit... Dies kann einige Sekunden dauern 🚀",
+    error_no_results: "Keine Ergebnisse für die ausgewählten Daten gefunden.",
+    error_server: "Suchserver antwortet nicht. Überprüfen Sie Ihre Verbindung.",
+    result_title: "Ergebnisse für",
+    result_best_option: "Beste Option",
+    result_vpn: "VPN:",
+    result_pay_here: "Von hier bezahlen",
+    result_trick: "Trick",
+    magic_title: "Wie funktioniert die Magie?",
+    magic_subtitle: "Es ist einfach: Reiseseiten berechnen mehr, wenn sie Geld vermuten. Wir bringen Ihnen bei, wie ein Einheimischer auszusehen.",
+    step_1_title: "1. Globaler Scan",
+    step_1_desc: "Wir verfolgen Echtzeitpreise in über 50 Ländern.",
+    step_2_title: "2. IP-Auswahl",
+    step_2_desc: "Wir sagen Ihnen, welches Land Sie wählen müssen, um weniger Steuern und Währungsgebühren zu zahlen.",
+    step_3_title: "3. Direkte Ersparnis",
+    step_3_desc: "Aktivieren Sie Ihr VPN und kaufen Sie das Ticket zum lokalen Preis.",
+    modal_title: "Mission:",
+    modal_subtitle: "Folgen Sie diesen 3 Schritten, um den Preis freizuschalten.",
+    modal_step_1: "Verbinden Sie Ihr VPN",
+    modal_step_1_desc: "Verbinden Sie sich mit einem Server in",
+    modal_vpn_offer: "Kein VPN?",
+    modal_vpn_deal: "Angebot: 72% Rabatt bei NordVPN",
+    modal_step_2: "Inkognito öffnen",
+    modal_step_2_desc: "Verwenden Sie Strg + Umschalt + N. Wichtig, um Cookies zu löschen.",
+    modal_step_3: "Lokal bezahlen",
+    modal_warning: "⚠️ Wichtig:",
+    modal_warning_desc: "Zahlen Sie immer in der lokalen Währung. Lassen Sie die Website nicht in Ihre Währung umrechnen.",
+    modal_btn_go: "Zur Buchungsseite",
+    adults: "Erwachsene",
+    children: "Kinder",
+    infants: "Kleinkinder",
+    traveler: "Reisender",
+    travelers: "Reisende",
+    guest: "Gast",
+    guests: "Gäste",
+    age_adult: "12+ Jahre",
+    age_child: "2-11 Jahre",
+    age_infant: "< 2 Jahre",
+    footer_text: "Der intelligente Vergleich, der mit Ihnen reist."
+  },
+  FR: {
+    searching_badge: "Recherche dans 50+ pays réels 🌍",
+    hero_title_1: "Lieu virtuel.",
+    hero_title_2: "Économies réelles.",
+    hero_subtitle: "Les compagnies aériennes changent les prix selon votre emplacement. Nous vous disons d'où vous connecter pour payer moins.",
+    tab_flights: "Vols",
+    tab_hotels: "Hôtels",
+    tab_cruises: "Croisières",
+    label_roundtrip: "Aller-retour",
+    label_oneway: "Aller simple",
+    label_direct: "Vols directs uniquement",
+    label_origin: "Origine",
+    label_destination: "Destination",
+    label_date_start: "Départ",
+    label_date_end: "Retour",
+    label_checkin: "Arrivée",
+    label_checkout: "Départ",
+    label_passengers: "Passagers",
+    label_guests: "Invités",
+    btn_search: "Chercher Économies",
+    btn_loading: "Recherche en temps réel... Cela peut prendre quelques secondes 🚀",
+    error_no_results: "Aucun résultat trouvé pour les dates sélectionnées.",
+    error_server: "Le serveur de recherche ne répond pas. Vérifiez votre connexion.",
+    result_title: "Résultats pour",
+    result_best_option: "Meilleure Option",
+    result_vpn: "VPN:",
+    result_pay_here: "Payer d'ici",
+    result_trick: "Astuce",
+    magic_title: "Comment fonctionne la magie ?",
+    magic_subtitle: "C'est simple : les sites de voyage vous facturent plus s'ils détectent que vous avez de l'argent. Nous vous apprenons à passer pour un local.",
+    step_1_title: "1. Scan Global",
+    step_1_desc: "Nous suivons les prix en temps réel dans plus de 50 pays.",
+    step_2_title: "2. Sélection IP",
+    step_2_desc: "Nous vous disons quel pays choisir pour payer moins de taxes.",
+    step_3_title: "3. Économie Directe",
+    step_3_desc: "Activez votre VPN et achetez le billet au prix local.",
+    modal_title: "Mission:",
+    modal_subtitle: "Suivez ces 3 étapes pour débloquer le prix.",
+    modal_step_1: "Connectez votre VPN",
+    modal_step_1_desc: "Connectez-vous à un serveur en",
+    modal_vpn_offer: "Pas de VPN ?",
+    modal_vpn_deal: "Offre : -72% chez NordVPN",
+    modal_step_2: "Ouvrir Incognito",
+    modal_step_2_desc: "Utilisez Ctrl + Shift + N. Vital pour effacer les cookies.",
+    modal_step_3: "Payer local",
+    modal_warning: "⚠️ Important:",
+    modal_warning_desc: "Payez toujours dans la devise locale. Ne laissez pas le site convertir.",
+    modal_btn_go: "Aller au site de réservation",
+    adults: "Adultes",
+    children: "Enfants",
+    infants: "Bébés",
+    traveler: "Voyageur",
+    travelers: "Voyageurs",
+    guest: "Invité",
+    guests: "Invités",
+    age_adult: "12+ ans",
+    age_child: "2-11 ans",
+    age_infant: "< 2 ans",
+    footer_text: "Le comparateur intelligent qui voyage avec vous."
+  },
+  IT: {
+    searching_badge: "Ricerca in 50+ paesi reali 🌍",
+    hero_title_1: "Posizione virtuale.",
+    hero_title_2: "Risparmio reale.",
+    hero_subtitle: "Le compagnie aeree cambiano i prezzi in base alla tua posizione. Ti diciamo da dove connetterti per pagare meno.",
+    tab_flights: "Voli",
+    tab_hotels: "Hotel",
+    tab_cruises: "Crociere",
+    label_roundtrip: "Andata e ritorno",
+    label_oneway: "Solo andata",
+    label_direct: "Solo voli diretti",
+    label_origin: "Origine",
+    label_destination: "Destinazione",
+    label_date_start: "Partenza",
+    label_date_end: "Ritorno",
+    label_checkin: "Check-in",
+    label_checkout: "Check-out",
+    label_passengers: "Passeggeri",
+    label_guests: "Ospiti",
+    btn_search: "Cerca Risparmio",
+    btn_loading: "Ricerca in tempo reale... Potrebbe richiedere alcuni secondi 🚀",
+    error_no_results: "Nessun risultato trovato per le date selezionate.",
+    error_server: "Il server di ricerca non risponde. Controlla la tua connessione.",
+    result_title: "Risultati per",
+    result_best_option: "Migliore Opzione",
+    result_vpn: "VPN:",
+    result_pay_here: "Paga da qui",
+    result_trick: "Trucco",
+    magic_title: "Come funziona la magia?",
+    magic_subtitle: "È semplice: i siti di viaggi ti fanno pagare di più se rilevano che hai soldi. Ti insegniamo a sembrare un locale.",
+    step_1_title: "1. Scansione Globale",
+    step_1_desc: "Tracciamo i prezzi in tempo reale in oltre 50 paesi.",
+    step_2_title: "2. Selezione IP",
+    step_2_desc: "Ti diciamo quale paese scegliere per pagare meno tasse.",
+    step_3_title: "3. Risparmio Diretto",
+    step_3_desc: "Attiva la tua VPN e acquista il biglietto al prezzo locale.",
+    modal_title: "Missione:",
+    modal_subtitle: "Segui questi 3 passaggi per sbloccare il prezzo.",
+    modal_step_1: "Connetti la tua VPN",
+    modal_step_1_desc: "Connettiti a un server in",
+    modal_vpn_offer: "Non hai una VPN?",
+    modal_vpn_deal: "Offerta: 72% Sconto su NordVPN",
+    modal_step_2: "Apri Incognito",
+    modal_step_2_desc: "Usa Ctrl + Shift + N. Vitale per cancellare i cookie.",
+    modal_step_3: "Paga locale",
+    modal_warning: "⚠️ Importante:",
+    modal_warning_desc: "Paga sempre nella valuta locale. Non lasciare che il sito converta.",
+    modal_btn_go: "Vai al sito di prenotazione",
+    adults: "Adulti",
+    children: "Bambini",
+    infants: "Neonati",
+    traveler: "Viaggiatore",
+    travelers: "Viaggiatori",
+    guest: "Ospite",
+    guests: "Ospiti",
+    age_adult: "12+ anni",
+    age_child: "2-11 anni",
+    age_infant: "< 2 anni",
+    footer_text: "Il comparatore intelligente che viaggia con te."
+  }
+};
+
+// --- BASE DE DATOS DE AEROPUERTOS ---
 const AIRPORTS = [
-  // ESPAÑA (COMPLETO)
   {city:"Madrid Barajas",code:"MAD",country:"España"},{city:"Barcelona El Prat",code:"BCN",country:"España"},
   {city:"Palma de Mallorca",code:"PMI",country:"España"},{city:"Málaga Costa del Sol",code:"AGP",country:"España"},
   {city:"Alicante Elche",code:"ALC",country:"España"},{city:"Gran Canaria",code:"LPA",country:"España"},
@@ -66,8 +369,7 @@ const AIRPORTS = [
   {city:"Seúl",code:"ICN",country:"Corea del Sur"},{city:"Bali",code:"DPS",country:"Indonesia"},
   {city:"Dubái",code:"DXB",country:"EAU"},{city:"Doha",code:"DOH",country:"Catar"},
   {city:"Sídney",code:"SYD",country:"Australia"},{city:"Melbourne",code:"MEL",country:"Australia"},
-  {city:"El Cairo",code:"CAI",country:"Egipto"},{city:"Marrakech",code:"RAK",country:"Marruecos"},
-  {city:"Sofia",code:"SOF",country:"Bulgaria"},{city:"Bombay",code:"BOM",country:"India"},{city:"Nueva Delhi",code:"DEL",country:"India"}
+  {city:"El Cairo",code:"CAI",country:"Egipto"},{city:"Marrakech",code:"RAK",country:"Marruecos"}
 ];
 
 const BACKGROUND_IMAGES = [
@@ -75,6 +377,20 @@ const BACKGROUND_IMAGES = [
   'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=2073',
   'https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=2038',
   'https://images.unsplash.com/photo-1528164344705-47542687000d?q=80&w=2092'
+];
+
+// IMÁGENES DE BANDERAS (Usando FlagCDN para calidad)
+const LANGUAGES = [
+    { code: 'ES', label: 'Español', flagUrl: 'https://flagcdn.com/w40/es.png' },
+    { code: 'EN', label: 'English', flagUrl: 'https://flagcdn.com/w40/gb.png' },
+    { code: 'DE', label: 'Deutsch', flagUrl: 'https://flagcdn.com/w40/de.png' },
+    { code: 'FR', label: 'Français', flagUrl: 'https://flagcdn.com/w40/fr.png' },
+    { code: 'IT', label: 'Italiano', flagUrl: 'https://flagcdn.com/w40/it.png' }
+];
+
+const CURRENCIES = [
+    { code: 'EUR', symbol: '€', label: 'Euro' },
+    { code: 'USD', symbol: '$', label: 'Dólar' }
 ];
 
 const App = () => {
@@ -89,22 +405,31 @@ const App = () => {
   const [showTutorial, setShowTutorial] = useState(false);
   const [bgImage, setBgImage] = useState('');
   
+  // Estados para los menús desplegables personalizados
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const [isCurrencyMenuOpen, setIsCurrencyMenuOpen] = useState(false);
   const [isPassengerMenuOpen, setIsPassengerMenuOpen] = useState(false);
+  
+  const langMenuRef = useRef(null);
+  const currencyMenuRef = useRef(null);
   const passengerMenuRef = useRef(null);
   const [suggestions, setSuggestions] = useState({ origin: [], destination: [] });
   const [showSuggestions, setShowSuggestions] = useState({ origin: false, destination: false });
 
-  // NUEVO CAMPO: directFlights
   const [formData, setFormData] = useState({ 
     origin: '', destination: '', date: '', returnDate: '',
     passengers: { adults: 1, children: 0, infants: 0 }, 
     guests: { adults: 2, children: 0 },
-    directFlights: false // Estado para el checkbox
+    directFlights: false 
   });
+
+  const t = (key) => TRANSLATIONS[userLanguage][key] || TRANSLATIONS['ES'][key];
 
   useEffect(() => {
     setBgImage(BACKGROUND_IMAGES[Math.floor(Math.random() * BACKGROUND_IMAGES.length)]);
     const handleClickOutside = (event) => {
+      if (langMenuRef.current && !langMenuRef.current.contains(event.target)) setIsLangMenuOpen(false);
+      if (currencyMenuRef.current && !currencyMenuRef.current.contains(event.target)) setIsCurrencyMenuOpen(false);
       if (passengerMenuRef.current && !passengerMenuRef.current.contains(event.target)) setIsPassengerMenuOpen(false);
       if (!event.target.closest('.suggestion-box')) setShowSuggestions({ origin: false, destination: false });
     };
@@ -145,10 +470,12 @@ const App = () => {
   const getTotalTravelers = () => {
       if (activeTab === 'flights') {
           const { adults, children, infants } = formData.passengers;
-          return `${adults + children + infants} Viajero${adults + children + infants !== 1 ? 's' : ''}`;
+          const count = adults + children + infants;
+          return `${count} ${count !== 1 ? t('travelers') : t('traveler')}`;
       } else {
           const { adults, children } = formData.guests;
-          return `${adults + children} Huésped${adults + children !== 1 ? 'es' : ''}`;
+          const count = adults + children;
+          return `${count} ${count !== 1 ? t('guests') : t('guest')}`;
       }
   };
 
@@ -172,7 +499,9 @@ const App = () => {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!formData.destination) return alert("Por favor indica un destino");
+    if (API_URL_BASE.includes('PON_AQUI')) return alert("Configura la URL del servidor en App.jsx");
+    if (!formData.destination) return alert(t('error_no_results'));
+    
     setLoading(true);
     setResults(null);
     setErrorMsg(null);
@@ -185,14 +514,18 @@ const App = () => {
     let endpoint = activeTab === 'hotels' ? '/hotels' : activeTab === 'cruises' ? '/cruises' : '/search';
 
     try {
+      // BÚSQUEDA 100% REAL
       const response = await fetch(`${API_URL_BASE}${endpoint}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error('Error servidor');
+      
+      if (!response.ok) throw new Error('Error de conexión con el servidor');
+      
       const data = await response.json();
       
-      if (!data || data.length === 0) setErrorMsg("No se encontraron precios en tiempo real para esta ruta. Intenta otra fecha.");
-      else {
+      if (!data || data.length === 0) {
+          setErrorMsg(t('error_no_results'));
+      } else {
           const processed = data.map(item => ({
             ...item,
             flag: item.flag?.length === 2 ? String.fromCodePoint(...item.flag.toUpperCase().split('').map(c => 127397 + c.charCodeAt())) : '🌍',
@@ -211,11 +544,11 @@ const App = () => {
       // --- FALLBACK DEMO CON LOS NUEVOS PAÍSES ---
       const dest = formData.destination;
       const demoData = [
-        { country: 'Bulgaria', flag: 'BG', price: 1400, currency: 'BGN', airline: 'Bulgaria Air', hotelName: `Hotel ${dest} Sofia`, stars: 4, image: `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
+        { country: 'Rep. Checa', flag: 'CZ', price: 4200, currency: 'CZK', airline: 'Smartwings', hotelName: `Hotel ${dest} Prague`, stars: 4, image: `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
         { country: 'India', flag: 'IN', price: 65000, currency: 'INR', airline: 'Air India', hotelName: `${dest} Palace`, stars: 5, image: `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
         { country: 'México', flag: 'MX', price: 15500, currency: 'MXN', airline: 'Aeroméxico', hotelName: `Gran Hotel ${dest}`, stars: 4, image: `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
-        { country: 'Tailandia', flag: 'TH', price: 28000, currency: 'THB', airline: 'Thai Airways', hotelName: `${dest} Resort`, stars: 5, image: `https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
         { country: 'España', flag: 'ES', price: 450, currency: 'EUR', airline: 'Iberia', hotelName: `${dest} Centro`, stars: 3, image: `https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
+        { country: 'Malasia', flag: 'MY', price: 1800, currency: 'MYR', airline: 'Malaysia Airlines', hotelName: `${dest} Towers`, stars: 5, image: `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500`, type: activeTab === 'hotels' ? 'hotel' : 'flight' },
       ];
       setTimeout(() => { setResults(demoData); setLoading(false); }, 1500);
       return;
@@ -226,38 +559,86 @@ const App = () => {
     <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
       {/* HEADER */}
       <div className="bg-blue-900 text-white pb-64 relative overflow-hidden transition-all duration-1000">
-        <div className="absolute top-4 right-4 z-20 flex gap-3">
-            <div className="bg-black/30 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/20 hover:bg-black/40 transition">
-                <Globe className="h-3 w-3 text-slate-300"/>
-                <select 
-                    value={userLanguage} 
-                    onChange={(e) => setUserLanguage(e.target.value)} 
-                    className="bg-transparent font-bold text-white text-xs outline-none cursor-pointer uppercase"
+        
+        {/* TOP BAR: SELECTORES IDIOMA Y MONEDA (DISEÑO FINAL) */}
+        <div className="absolute top-4 right-4 z-20 flex gap-4 items-center">
+            
+            {/* Selector Idioma Custom */}
+            <div className="relative" ref={langMenuRef}>
+                <button 
+                    onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                    className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-2 rounded-lg border border-white/20 cursor-pointer hover:bg-white/20 transition text-white"
                 >
-                    <option value="ES" className="text-black bg-white">ES</option>
-                    <option value="EN" className="text-black bg-white">EN</option>
-                    <option value="DE" className="text-black bg-white">DE</option>
-                    <option value="FR" className="text-black bg-white">FR</option>
-                    <option value="IT" className="text-black bg-white">IT</option>
-                </select>
+                    <img 
+                        src={LANGUAGES.find(l => l.code === userLanguage)?.flagUrl} 
+                        alt="flag" 
+                        className="w-5 h-auto rounded-sm shadow-sm"
+                    />
+                    {/* CHANGE HERE: Display just the userLanguage code instead of full label */}
+                    <span className="text-sm font-bold">{userLanguage}</span>
+                    <ChevronDown className="h-3 w-3 text-white/70"/>
+                </button>
+                
+                {isLangMenuOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in-up z-50 text-slate-800">
+                        {LANGUAGES.map((lang) => (
+                            <button
+                                key={lang.code}
+                                onClick={() => { setUserLanguage(lang.code); setIsLangMenuOpen(false); }}
+                                className="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 transition text-slate-700 border-b border-slate-50 last:border-0"
+                            >
+                                <img src={lang.flagUrl} alt={lang.label} className="w-5 h-auto rounded-sm shadow-sm"/>
+                                <span className="text-sm font-medium">{lang.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
-            <div className="bg-black/30 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/20 hover:bg-black/40 transition">
-                <span className="text-xs text-slate-200 uppercase font-semibold">Moneda:</span>
-                <select 
-                    value={userCurrency} 
-                    onChange={(e) => setUserCurrency(e.target.value)} 
-                    className="bg-transparent font-bold text-white outline-none cursor-pointer"
+
+            {/* Selector Moneda Custom */}
+            <div className="relative" ref={currencyMenuRef}>
+                <button 
+                    onClick={() => setIsCurrencyMenuOpen(!isCurrencyMenuOpen)}
+                    className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-2 rounded-lg border border-white/20 cursor-pointer hover:bg-white/20 transition text-white"
                 >
-                    <option value="EUR" className="text-black bg-white">EUR (€)</option>
-                    <option value="USD" className="text-black bg-white">USD ($)</option>
-                </select>
+                    <span className="text-sm font-bold text-teal-400">{CURRENCIES.find(c => c.code === userCurrency)?.symbol}</span>
+                    <span className="text-sm font-bold">{userCurrency}</span>
+                    <ChevronDown className="h-3 w-3 text-white/70"/>
+                </button>
+
+                {isCurrencyMenuOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in-up z-50 text-slate-800">
+                        {CURRENCIES.map((curr) => (
+                            <button
+                                key={curr.code}
+                                onClick={() => { setUserCurrency(curr.code); setIsCurrencyMenuOpen(false); }}
+                                className="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 transition text-slate-700 border-b border-slate-50 last:border-0"
+                            >
+                                <span className="text-sm font-bold text-blue-600 w-5 text-center">{curr.symbol}</span>
+                                <span className="text-sm font-medium">{curr.code}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
+
         {bgImage && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${bgImage}')` }} />}
         <div className="absolute inset-0 bg-gradient-to-b from-blue-900/60 via-blue-900/40 to-blue-900/90" />
-        <div className="relative container mx-auto px-4 pt-20 text-center">
-          <nav className="flex justify-center items-center gap-2 mb-8"><Globe className="text-teal-400 h-8 w-8" /> <span className="text-3xl font-bold tracking-tighter">TRAVPN</span></nav>
-          <div className="mb-10"><span className="inline-block py-1 px-3 rounded-full bg-blue-600/40 backdrop-blur-md border border-blue-400/50 text-blue-100 text-xs font-bold uppercase tracking-wider mb-6">Buscando en 50+ países reales 🌍</span><h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">Ubicación virtual.<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-blue-200">Ahorro real.</span></h1></div>
+        <div className="relative container mx-auto px-4 pt-24 text-center">
+          <nav className="flex justify-center items-center gap-3 mb-8 animate-fade-in-down">
+            <Globe className="text-teal-400 h-10 w-10 drop-shadow-lg" /> 
+            <span className="text-4xl font-extrabold tracking-tighter drop-shadow-lg">TRAVPN</span>
+          </nav>
+          <div className="mb-12">
+            <span className="inline-flex items-center gap-2 py-1.5 px-4 rounded-full bg-blue-500/20 backdrop-blur-md border border-blue-400/30 text-blue-100 text-xs font-bold uppercase tracking-wider mb-6 shadow-lg">
+              <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span> {t('searching_badge')}
+            </span>
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight drop-shadow-xl">
+              {t('hero_title_1')}<br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-blue-200">{t('hero_title_2')}</span>
+            </h1>
+            <p className="text-white/90 text-lg max-w-2xl mx-auto font-light drop-shadow-md">{t('hero_subtitle')}</p>
+          </div>
         </div>
       </div>
 
@@ -266,109 +647,94 @@ const App = () => {
         <div className="bg-white rounded-[2rem] shadow-2xl overflow-visible max-w-5xl mx-auto border border-slate-100">
           <div className="flex bg-slate-50 p-2 border-b border-slate-200 gap-1 overflow-x-auto rounded-t-[2rem]">
             {['flights', 'hotels', 'cruises'].map(tab => (
-                <button key={tab} onClick={() => {setActiveTab(tab); setResults(null); setErrorMsg(null);}} className={`flex-1 min-w-[100px] py-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all ${activeTab === tab ? 'bg-white shadow text-blue-600 ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>
+                <button key={tab} onClick={() => {setActiveTab(tab); setResults(null); setErrorMsg(null);}} className={`flex-1 min-w-[120px] py-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all duration-200 ${activeTab === tab ? 'bg-white shadow-md text-blue-600 ring-1 ring-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}>
                     {tab === 'flights' ? <Plane className="h-5 w-5"/> : tab === 'hotels' ? <Hotel className="h-5 w-5"/> : <Ship className="h-5 w-5"/>} 
-                    {tab === 'flights' ? 'Vuelos' : tab === 'hotels' ? 'Hoteles' : 'Cruceros'}
+                    {t(`tab_${tab}`)}
                 </button>
             ))}
           </div>
-          <form onSubmit={handleSearch} className="p-6 md:p-8 bg-white grid grid-cols-1 md:grid-cols-12 gap-4 items-end rounded-b-[2rem]">
+          
+          <form onSubmit={handleSearch} className="p-6 md:p-10 bg-white grid grid-cols-1 md:grid-cols-12 gap-6 items-end rounded-b-[2rem]">
             {activeTab === 'flights' && (
-                <div className="md:col-span-12 flex flex-wrap gap-4 mb-2">
-                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="tripType" value="roundtrip" checked={tripType === 'roundtrip'} onChange={() => setTripType('roundtrip')} /><span className="font-semibold text-slate-700">Ida y vuelta</span></label>
-                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="tripType" value="oneway" checked={tripType === 'oneway'} onChange={() => setTripType('oneway')} /><span className="font-semibold text-slate-700">Solo ida</span></label>
-                    <label className="flex items-center gap-2 cursor-pointer group ml-2 sm:ml-6 border-l pl-6 border-slate-200"><div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${formData.directFlights ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}`}>{formData.directFlights && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}</div><input type="checkbox" className="hidden" checked={formData.directFlights} onChange={(e) => setFormData({...formData, directFlights: e.target.checked})} /><span className={`font-semibold ${formData.directFlights ? 'text-blue-900' : 'text-slate-500 group-hover:text-slate-700'}`}>Solo vuelos directos</span></label>
+                <div className="md:col-span-12 flex flex-wrap gap-6 mb-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none group"><div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${tripType === 'roundtrip' ? 'border-blue-600' : 'border-slate-300 group-hover:border-blue-400'}`}>{tripType === 'roundtrip' && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}</div><input type="radio" name="tripType" value="roundtrip" className="hidden" checked={tripType === 'roundtrip'} onChange={() => setTripType('roundtrip')} /><span className={`font-semibold ${tripType === 'roundtrip' ? 'text-blue-900' : 'text-slate-500'}`}>{t('label_roundtrip')}</span></label>
+                    <label className="flex items-center gap-2 cursor-pointer select-none group"><div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${tripType === 'oneway' ? 'border-blue-600' : 'border-slate-300 group-hover:border-blue-400'}`}>{tripType === 'oneway' && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}</div><input type="radio" name="tripType" value="oneway" className="hidden" checked={tripType === 'oneway'} onChange={() => setTripType('oneway')} /><span className={`font-semibold ${tripType === 'oneway' ? 'text-blue-900' : 'text-slate-500'}`}>{t('label_oneway')}</span></label>
+                    <label className="flex items-center gap-2 cursor-pointer group ml-auto select-none"><div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${formData.directFlights ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}`}>{formData.directFlights && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}</div><input type="checkbox" className="hidden" checked={formData.directFlights} onChange={(e) => setFormData({...formData, directFlights: e.target.checked})} /><span className={`font-medium ${formData.directFlights ? 'text-blue-900' : 'text-slate-500'}`}>{t('label_direct')}</span></label>
                 </div>
             )}
             
             {/* ORIGEN CON AUTOCOMPLETADO */}
             {activeTab === 'flights' && (
                 <div className="md:col-span-3 relative suggestion-box">
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">Origen</label>
-                    <div className="relative"><MapPin className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input type="text" placeholder="Madrid (MAD)" className="w-full pl-10 p-3.5 bg-slate-50 rounded-xl border border-slate-200" value={formData.origin} onChange={(e) => handleInputChange('origin', e.target.value)} onFocus={() => formData.origin.length > 1 && setShowSuggestions(prev => ({...prev, origin: true}))} /></div>
-                    {showSuggestions.origin && suggestions.origin.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 bg-white shadow-xl rounded-xl mt-1 border border-slate-100 z-50 overflow-hidden max-h-60 overflow-y-auto">
-                            {suggestions.origin.map((airport, idx) => (
-                                <button key={idx} type="button" onClick={() => selectSuggestion('origin', airport)} className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 transition"><span className="font-bold text-slate-800">{airport.city}</span> <span className="text-slate-400 text-sm">({airport.code})</span><div className="text-xs text-slate-400">{airport.country}</div></button>
-                            ))}
-                        </div>
-                    )}
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">{t('label_origin')}</label>
+                    <div className="relative group"><MapPin className="absolute left-3.5 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition" /><input type="text" placeholder="MAD" className="w-full pl-11 p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none font-medium transition" value={formData.origin} onChange={(e) => handleInputChange('origin', e.target.value)} onFocus={() => formData.origin.length > 1 && setShowSuggestions(prev => ({...prev, origin: true}))} /></div>
+                    {showSuggestions.origin && suggestions.origin.length > 0 && (<div className="absolute top-full left-0 right-0 bg-white shadow-xl rounded-xl mt-2 border border-slate-100 z-50 overflow-hidden max-h-60 overflow-y-auto">{suggestions.origin.map((airport, idx) => (<button key={idx} type="button" onClick={() => selectSuggestion('origin', airport)} className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-slate-50 last:border-0 transition"><span className="font-bold text-slate-800">{airport.city}</span> <span className="text-slate-400 text-sm">({airport.code})</span><div className="text-xs text-slate-400 font-medium uppercase mt-0.5">{airport.country}</div></button>))}</div>)}
                 </div>
             )}
 
             <div className={`${activeTab === 'flights' ? 'md:col-span-3' : 'md:col-span-4'} relative suggestion-box`}>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">Destino</label>
-                <div className="relative"><Globe className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input type="text" placeholder={activeTab === 'hotels' ? "Ej: París" : "Destino"} className="w-full pl-10 p-3.5 bg-slate-50 rounded-xl border border-slate-200" value={formData.destination} onChange={(e) => handleInputChange('destination', e.target.value)} onFocus={() => formData.destination.length > 1 && setShowSuggestions(prev => ({...prev, destination: true}))} /></div>
-                {activeTab === 'flights' && showSuggestions.destination && suggestions.destination.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 bg-white shadow-xl rounded-xl mt-1 border border-slate-100 z-50 overflow-hidden max-h-60 overflow-y-auto">
-                        {suggestions.destination.map((airport, idx) => (
-                            <button key={idx} type="button" onClick={() => selectSuggestion('destination', airport)} className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 transition"><span className="font-bold text-slate-800">{airport.city}</span> <span className="text-slate-400 text-sm">({airport.code})</span><div className="text-xs text-slate-400">{airport.country}</div></button>
-                        ))}
-                    </div>
-                )}
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">{t('label_destination')}</label>
+                <div className="relative group"><Globe className="absolute left-3.5 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition" /><input type="text" placeholder={activeTab === 'hotels' ? "Paris" : "Tokyo"} className="w-full pl-11 p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none font-medium transition" value={formData.destination} onChange={(e) => handleInputChange('destination', e.target.value)} onFocus={() => formData.destination.length > 1 && setShowSuggestions(prev => ({...prev, destination: true}))} /></div>
+                {activeTab === 'flights' && showSuggestions.destination && suggestions.destination.length > 0 && (<div className="absolute top-full left-0 right-0 bg-white shadow-xl rounded-xl mt-2 border border-slate-100 z-50 overflow-hidden max-h-60 overflow-y-auto">{suggestions.destination.map((airport, idx) => (<button key={idx} type="button" onClick={() => selectSuggestion('destination', airport)} className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-slate-50 last:border-0 transition"><span className="font-bold text-slate-800">{airport.city}</span> <span className="text-slate-400 text-sm">({airport.code})</span><div className="text-xs text-slate-400 font-medium uppercase mt-0.5">{airport.country}</div></button>))}</div>)}
             </div>
-            
             <div className={`md:col-span-3 grid ${tripType === 'roundtrip' || activeTab !== 'flights' ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
-                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">{activeTab === 'hotels' ? 'Entrada' : 'Ida'}</label><input type="date" className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} /></div>
-                {(tripType === 'roundtrip' || activeTab !== 'flights') && (<div><label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">{activeTab === 'hotels' ? 'Salida' : 'Vuelta'}</label><input type="date" className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200" value={formData.returnDate} onChange={(e) => setFormData({...formData, returnDate: e.target.value})} /></div>)}
+                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">{activeTab === 'hotels' ? t('label_checkin') : t('label_date_start')}</label><input type="date" className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-medium text-slate-600" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} /></div>
+                {(tripType === 'roundtrip' || activeTab !== 'flights') && (<div><label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">{activeTab === 'hotels' ? t('label_checkout') : t('label_date_end')}</label><input type="date" className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-medium text-slate-600" value={formData.returnDate} onChange={(e) => setFormData({...formData, returnDate: e.target.value})} /></div>)}
             </div>
-
             <div className="md:col-span-3 relative" ref={passengerMenuRef}>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">{activeTab === 'flights' ? 'Pasajeros' : 'Huéspedes'}</label>
-                <button type="button" onClick={() => setIsPassengerMenuOpen(!isPassengerMenuOpen)} className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-left font-medium text-slate-700 hover:bg-slate-100 transition"><div className="flex items-center gap-2 truncate"><Users className="h-5 w-5 text-slate-400" /><span className="text-sm">{getTotalTravelers()}</span></div><ChevronDown className="h-4 w-4 text-slate-400" /></button>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2 pl-1">{activeTab === 'flights' ? t('label_passengers') : t('label_guests')}</label>
+                <button type="button" onClick={() => setIsPassengerMenuOpen(!isPassengerMenuOpen)} className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-left font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition active:scale-[0.98]"><div className="flex items-center gap-2 truncate"><Users className="h-5 w-5 text-slate-400" /><span className="text-sm">{getTotalTravelers()}</span></div><ChevronDown className="h-4 w-4 text-slate-400" /></button>
                 {isPassengerMenuOpen && (
                     <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 p-4 z-50 animate-fade-in-up">
-                        <div className="flex justify-between items-center mb-4"><div><p className="font-bold text-sm">Adultos</p><p className="text-xs text-slate-400">12+ años</p></div><div className="flex items-center gap-3"><button type="button" onClick={() => updateCount(activeTab === 'flights' ? 'flight' : 'hotel', 'adults', -1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Minus className="h-4 w-4"/></button><span className="font-bold w-4 text-center">{activeTab === 'flights' ? formData.passengers.adults : formData.guests.adults}</span><button type="button" onClick={() => updateCount(activeTab === 'flights' ? 'flight' : 'hotel', 'adults', 1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Plus className="h-4 w-4"/></button></div></div>
-                        <div className="flex justify-between items-center mb-4"><div><p className="font-bold text-sm">Niños</p><p className="text-xs text-slate-400">2-11 años</p></div><div className="flex items-center gap-3"><button type="button" onClick={() => updateCount(activeTab === 'flights' ? 'flight' : 'hotel', 'children', -1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Minus className="h-4 w-4"/></button><span className="font-bold w-4 text-center">{activeTab === 'flights' ? formData.passengers.children : formData.guests.children}</span><button type="button" onClick={() => updateCount(activeTab === 'flights' ? 'flight' : 'hotel', 'children', 1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Plus className="h-4 w-4"/></button></div></div>
-                        {activeTab === 'flights' && (<div className="flex justify-between items-center"><div><p className="font-bold text-sm">Bebés</p><p className="text-xs text-slate-400">&lt; 2 años</p></div><div className="flex items-center gap-3"><button type="button" onClick={() => updateCount('flight', 'infants', -1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Minus className="h-4 w-4"/></button><span className="font-bold w-4 text-center">{formData.passengers.infants}</span><button type="button" onClick={() => updateCount('flight', 'infants', 1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Plus className="h-4 w-4"/></button></div></div>)}
+                        <div className="flex justify-between items-center mb-4"><div><p className="font-bold text-sm">{t('adults')}</p><p className="text-xs text-slate-400">{t('age_adult')}</p></div><div className="flex items-center gap-3"><button type="button" onClick={() => updateCount(activeTab === 'flights' ? 'flight' : 'hotel', 'adults', -1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Minus className="h-4 w-4"/></button><span className="font-bold w-4 text-center">{activeTab === 'flights' ? formData.passengers.adults : formData.guests.adults}</span><button type="button" onClick={() => updateCount(activeTab === 'flights' ? 'flight' : 'hotel', 'adults', 1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Plus className="h-4 w-4"/></button></div></div>
+                        <div className="flex justify-between items-center mb-4"><div><p className="font-bold text-sm">{t('children')}</p><p className="text-xs text-slate-400">{t('age_child')}</p></div><div className="flex items-center gap-3"><button type="button" onClick={() => updateCount(activeTab === 'flights' ? 'flight' : 'hotel', 'children', -1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Minus className="h-4 w-4"/></button><span className="font-bold w-4 text-center">{activeTab === 'flights' ? formData.passengers.children : formData.guests.children}</span><button type="button" onClick={() => updateCount(activeTab === 'flights' ? 'flight' : 'hotel', 'children', 1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Plus className="h-4 w-4"/></button></div></div>
+                        {activeTab === 'flights' && (<div className="flex justify-between items-center"><div><p className="font-bold text-sm">{t('infants')}</p><p className="text-xs text-slate-400">{t('age_infant')}</p></div><div className="flex items-center gap-3"><button type="button" onClick={() => updateCount('flight', 'infants', -1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Minus className="h-4 w-4"/></button><span className="font-bold w-4 text-center">{formData.passengers.infants}</span><button type="button" onClick={() => updateCount('flight', 'infants', 1)} className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"><Plus className="h-4 w-4"/></button></div></div>)}
                     </div>
                 )}
             </div>
             <div className="md:col-span-12 mt-4">
-              <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-xl shadow-lg hover:bg-blue-700 transition flex justify-center items-center gap-2 text-lg">{loading ? <span className="animate-spin">⌛ Buscando datos reales...</span> : <><Search className="h-5 w-5" /> Buscar Ahorro Real</>}</button>
+              <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-xl shadow-lg hover:bg-blue-700 transition flex justify-center items-center gap-3 text-lg active:scale-[0.99]">{loading ? <span className="flex items-center gap-2 animate-pulse">{t('btn_loading')}</span> : <><Search className="h-5 w-5" /> {t('btn_search')}</>}</button>
             </div>
           </form>
         </div>
       </div>
 
       {errorMsg && (
-          <div className="container mx-auto px-4 pb-20 max-w-6xl text-center">
-              <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl inline-block shadow-sm"><p className="font-bold mb-1">⚠️ No se encontraron resultados</p><p className="text-sm">{errorMsg}</p></div>
-          </div>
+          <div className="container mx-auto px-4 pb-20 max-w-6xl text-center animate-fade-in-up"><div className="bg-red-50 border border-red-100 text-red-600 px-8 py-6 rounded-2xl inline-block shadow-sm max-w-lg"><p className="font-bold text-lg mb-2 flex items-center justify-center gap-2"><AlertTriangle className="h-5 w-5"/> {t('error_no_results')}</p><p className="text-sm opacity-90">{errorMsg}</p></div></div>
       )}
 
       {results && !errorMsg && (
         <div className="container mx-auto px-4 py-8 max-w-6xl flex-grow animate-fade-in-up">
-            <h2 className="text-3xl font-bold mb-8 text-slate-800">Resultados para {formData.destination}</h2>
+            <h2 className="text-3xl font-bold mb-8 text-slate-800">{t('result_title')} {formData.destination}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {results.map((item, idx) => {
                 const converted = convertPrice(item.price, item.currency);
                 return (
-                  <div key={idx} className={`bg-white rounded-2xl p-6 border shadow-sm relative hover:shadow-xl transition ${idx === 0 ? 'border-teal-400 ring-1 ring-teal-50' : 'border-slate-100'}`}>
-                    {idx === 0 && <div className="absolute -top-3 left-6 bg-teal-500 text-white text-[10px] font-bold uppercase px-3 py-1 rounded-full shadow-md">Mejor Opción</div>}
+                  <div key={idx} className={`bg-white rounded-2xl p-6 border shadow-sm relative hover:shadow-xl transition duration-300 group ${idx === 0 ? 'border-teal-400 ring-1 ring-teal-50 shadow-md' : 'border-slate-100'}`}>
+                    {idx === 0 && <div className="absolute -top-3 left-6 bg-teal-500 text-white text-[10px] font-bold uppercase px-3 py-1 rounded-full shadow-md z-10">{t('result_best_option')}</div>}
                     <div className="flex justify-between items-start mb-4 mt-2">
-                        <div className="flex items-center gap-3"><span className="text-4xl">{item.flag}</span><div><h3 className="font-bold text-slate-800 text-lg">VPN: {item.country}</h3><div className="text-xs text-slate-400 font-medium flex items-center gap-1"><Lock className="w-3 h-3"/> Pagar desde aquí</div></div></div>
+                        <div className="flex items-center gap-3"><span className="text-4xl drop-shadow-sm">{item.flag}</span><div><h3 className="font-bold text-slate-800 text-lg leading-tight">{t('result_vpn')} {item.country}</h3><div className="text-xs text-slate-400 font-medium flex items-center gap-1"><Lock className="w-3 h-3"/> {t('result_pay_here')}</div></div></div>
                     </div>
                     {activeTab === 'hotels' && (
-                        <div className="h-40 bg-slate-100 rounded-lg mb-4 overflow-hidden relative">
-                            <img src={item.image || `https://source.unsplash.com/800x600/?hotel,${formData.destination}`} className="w-full h-full object-cover" onError={(e) => e.target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=500'} />
-                            <div className="absolute bottom-2 right-2 bg-white/90 px-2 py-1 rounded text-xs font-bold shadow">{item.stars} ⭐</div>
+                        <div className="h-48 bg-slate-100 rounded-xl mb-4 overflow-hidden relative group-hover:shadow-inner transition">
+                            <img src={item.image || `https://source.unsplash.com/800x600/?hotel,${formData.destination}`} className="w-full h-full object-cover transform group-hover:scale-105 transition duration-700" onError={(e) => e.target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=500'} />
+                            <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold shadow flex items-center gap-1">{item.stars} ⭐</div>
                         </div>
                     )}
-                    <div className="mb-4 text-center">
+                    <div className="mb-4 text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <div className="text-3xl font-extrabold text-slate-900">{item.price.toLocaleString()} <span className="text-sm text-slate-500 font-normal">{item.currency}</span></div>
-                        {converted && <div className="text-sm font-bold text-blue-600 mt-1">≈ {converted} {userCurrency}</div>}
+                        {converted && <div className="text-sm font-bold text-blue-600 mt-1 flex justify-center items-center gap-1">≈ {converted} {userCurrency} <span className="text-[10px] bg-blue-100 px-1 rounded uppercase">Est.</span></div>}
                     </div>
                     <div className="border-t border-slate-100 pt-4 mb-4">
                         <div className="flex items-center gap-2 text-sm text-slate-600">
-                            {activeTab === 'flights' && <><Plane className="h-4 w-4 text-blue-400"/> <span className="truncate">{item.airline}</span></>}
-                            {activeTab === 'hotels' && <><Hotel className="h-4 w-4 text-blue-400"/> <span className="truncate font-bold">{item.hotelName}</span></>}
-                            {activeTab === 'cruises' && <><Ship className="h-4 w-4 text-blue-400"/> <span className="truncate font-bold">{item.cruiseLine}</span></>}
+                            {activeTab === 'flights' && <><Plane className="h-4 w-4 text-blue-400 flex-shrink-0"/> <span className="truncate font-medium">{item.airline}</span></>}
+                            {activeTab === 'hotels' && <><Hotel className="h-4 w-4 text-blue-400 flex-shrink-0"/> <span className="truncate font-medium">{item.hotelName}</span></>}
+                            {activeTab === 'cruises' && <><Ship className="h-4 w-4 text-blue-400 flex-shrink-0"/> <span className="truncate font-medium">{item.cruiseLine}</span></>}
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => { setSelectedDeal(item); setShowTutorial(true); }} className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-800 transition"><Info className="h-4 w-4" /> Truco</button>
-                        <a href={getDealLink()} target="_blank" className="px-4 py-3 rounded-xl bg-blue-50 text-blue-600 font-bold border border-blue-200"><ExternalLink className="h-5 w-5" /></a>
+                    <div className="flex gap-2 mt-auto">
+                        <button onClick={() => { setSelectedDeal(item); setShowTutorial(true); }} className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-800 transition shadow-lg shadow-slate-200"><Info className="h-4 w-4" /> {t('result_trick')}</button>
+                        <a href={getDealLink()} target="_blank" className="px-4 py-3 rounded-xl bg-white text-blue-600 font-bold border-2 border-blue-100 hover:border-blue-600 hover:bg-blue-50 transition flex items-center justify-center"><ExternalLink className="h-5 w-5" /></a>
                     </div>
                   </div>
                 )
@@ -377,46 +743,52 @@ const App = () => {
         </div>
       )}
 
-      {/* LANDING / TUTORIAL */}
       {!results && !errorMsg && (
         <div className="bg-white py-20 flex-grow">
             <div className="container mx-auto px-4 max-w-6xl">
-                <div className="text-center mb-16"><h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">¿Cómo funciona la magia?</h2><p className="text-slate-500 text-lg max-w-2xl mx-auto">Es simple: las webs de viajes te cobran más si detectan que tienes dinero. Nosotros te enseñamos a parecer un local.</p></div>
+                <div className="text-center mb-16"><h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">{t('magic_title')}</h2><p className="text-slate-500 text-lg max-w-2xl mx-auto">{t('magic_subtitle')}</p></div>
                 <div className="grid md:grid-cols-3 gap-8 relative">
                     <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-slate-100 -z-10"></div>
-                    <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl text-center group"><div className="w-20 h-20 mx-auto bg-blue-600 text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform"><Globe className="h-10 w-10" /></div><h3 className="text-xl font-bold mb-3 text-slate-800">1. Escaneo Global</h3><p className="text-slate-500 leading-relaxed">Rastreamos precios en tiempo real en más de <strong className="text-blue-600">50 países</strong>.</p></div>
-                    <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl text-center group relative top-0 md:-top-6"><div className="w-20 h-20 mx-auto bg-teal-500 text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-teal-200 group-hover:scale-110 transition-transform"><Shield className="h-10 w-10" /></div><h3 className="text-xl font-bold mb-3 text-slate-800">2. Selección de IP</h3><p className="text-slate-500 leading-relaxed">Te decimos <strong className="text-teal-600">qué país elegir</strong> para pagar menos impuestos y divisa.</p></div>
-                    <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl text-center group"><div className="w-20 h-20 mx-auto bg-purple-600 text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-200 group-hover:scale-110 transition-transform"><CreditCard className="h-10 w-10" /></div><h3 className="text-xl font-bold mb-3 text-slate-800">3. Ahorro Directo</h3><p className="text-slate-500 leading-relaxed">Activas tu VPN y compras el billete al <strong className="text-purple-600">precio local</strong>.</p></div>
+                    <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl hover:shadow-2xl transition duration-300 text-center group"><div className="w-20 h-20 mx-auto bg-blue-600 text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform"><Globe className="h-10 w-10" /></div><h3 className="text-xl font-bold mb-3 text-slate-800">{t('step_1_title')}</h3><p className="text-slate-500 leading-relaxed">{t('step_1_desc')}</p></div>
+                    <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl hover:shadow-2xl transition duration-300 text-center group relative top-0 md:-top-6"><div className="w-20 h-20 mx-auto bg-teal-500 text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-teal-200 group-hover:scale-110 transition-transform"><Shield className="h-10 w-10" /></div><h3 className="text-xl font-bold mb-3 text-slate-800">{t('step_2_title')}</h3><p className="text-slate-500 leading-relaxed">{t('step_2_desc')}</p></div>
+                    <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl hover:shadow-2xl transition duration-300 text-center group"><div className="w-20 h-20 mx-auto bg-purple-600 text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-200 group-hover:scale-110 transition-transform"><CreditCard className="h-10 w-10" /></div><h3 className="text-xl font-bold mb-3 text-slate-800">{t('step_3_title')}</h3><p className="text-slate-500 leading-relaxed">{t('step_3_desc')}</p></div>
                 </div>
             </div>
         </div>
       )}
       
-      {/* MODAL TUTORIAL COMPLETO */}
       {showTutorial && selectedDeal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-2xl p-0 overflow-hidden shadow-2xl animate-fade-in-up max-h-[95vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-2xl p-0 overflow-hidden shadow-2xl animate-scale-up max-h-[95vh] overflow-y-auto">
             <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
                 <button onClick={() => setShowTutorial(false)} className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition z-10"><X className="h-5 w-5"/></button>
-                <div className="relative z-10"><div className="flex items-center gap-2 mb-2"><span className="bg-green-500 text-slate-900 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Ahorro detectado</span><span className="text-slate-400 text-xs">Destino: {formData.destination}</span></div><h3 className="text-3xl font-bold mb-1">Misión: {selectedDeal.country}</h3><p className="text-slate-400 text-sm">Sigue estos 3 pasos para desbloquear el precio.</p></div>
+                <div className="relative z-10"><div className="flex items-center gap-2 mb-2"><span className="bg-green-500 text-slate-900 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Ahorro detectado</span><span className="text-slate-400 text-xs">{t('result_title')} {formData.destination}</span></div><h3 className="text-3xl font-bold mb-1">{t('modal_title')} {selectedDeal.country}</h3><p className="text-slate-400 text-sm">{t('modal_subtitle')}</p></div>
             </div>
             <div className="p-8">
                 <div className="flex gap-5 mb-8 relative">
                     <div className="absolute left-6 top-10 bottom-[-20px] w-0.5 bg-slate-100"></div><div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 font-bold text-xl flex items-center justify-center border border-blue-100 z-10 shadow-sm">1</div>
-                    <div className="flex-grow"><h4 className="font-bold text-lg text-slate-800 flex items-center gap-2">Conecta tu VPN</h4><div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-2"><p className="text-slate-600 text-sm mb-3">Conéctate a un servidor en <strong>{selectedDeal.country}</strong>.</p><a href="https://go.nordvpn.net/aff_c?offer_id=15&aff_id=136277&url_id=902" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between bg-white border border-blue-200 p-3 rounded-lg hover:shadow-md transition group"><div className="flex items-center gap-3"><div className="bg-blue-600 text-white p-1.5 rounded"><Shield className="h-4 w-4"/></div><div><p className="font-bold text-slate-900 text-sm">¿No tienes VPN?</p><p className="text-xs text-green-600 font-bold">Oferta: 72% DTO en NordVPN</p></div></div><ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600"/></a></div></div>
+                    <div className="flex-grow"><h4 className="font-bold text-lg text-slate-800 flex items-center gap-2">{t('modal_step_1')}</h4><div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-2"><p className="text-slate-600 text-sm mb-3">{t('modal_step_1_desc')} <strong>{selectedDeal.country}</strong>.</p><a href="https://go.nordvpn.net/aff_c?offer_id=15&aff_id=136277&url_id=902" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between bg-white border border-blue-200 p-3 rounded-lg hover:shadow-md transition group"><div className="flex items-center gap-3"><div className="bg-blue-600 text-white p-1.5 rounded"><Shield className="h-4 w-4"/></div><div><p className="font-bold text-slate-900 text-sm">{t('modal_vpn_offer')}</p><p className="text-xs text-green-600 font-bold">{t('modal_vpn_deal')}</p></div></div><ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600"/></a></div></div>
                 </div>
                 <div className="flex gap-5 mb-8 relative">
                     <div className="absolute left-6 top-10 bottom-[-20px] w-0.5 bg-slate-100"></div><div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 font-bold text-xl flex items-center justify-center border border-purple-100 z-10 shadow-sm">2</div>
-                    <div className="flex-grow"><h4 className="font-bold text-lg text-slate-800 flex items-center gap-2">Abre Incógnito</h4><p className="text-slate-600 text-sm mt-1">Usa <strong>Ctrl + Shift + N</strong>. Es vital para limpiar cookies.</p></div>
+                    <div className="flex-grow"><h4 className="font-bold text-lg text-slate-800 flex items-center gap-2">{t('modal_step_2')}</h4><p className="text-slate-600 text-sm mt-1">{t('modal_step_2_desc')}</p></div>
                 </div>
                 <div className="flex gap-5">
                     <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-green-50 text-green-600 font-bold text-xl flex items-center justify-center border border-green-100 z-10 shadow-sm">3</div>
-                    <div className="flex-grow"><h4 className="font-bold text-lg text-slate-800 flex items-center gap-2">Paga en local</h4><div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mt-2 text-sm text-yellow-800"><p className="font-bold mb-1">⚠️ Importante:</p><p>Paga siempre en <strong>{selectedDeal.currency}</strong>. No dejes que la web convierta a {userCurrency}.</p></div><a href={getDealLink()} target="_blank" rel="noopener noreferrer" className="w-full mt-4 bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2">Ir a la web de compra <ExternalLink className="h-4 w-4"/></a></div>
+                    <div className="flex-grow"><h4 className="font-bold text-lg text-slate-800 flex items-center gap-2">{t('modal_step_3')}</h4><div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mt-2 text-sm text-yellow-800"><p className="font-bold mb-1">{t('modal_warning')}</p><p>{t('modal_warning_desc')}</p></div><a href={getDealLink()} target="_blank" rel="noopener noreferrer" className="w-full mt-4 bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2">{t('modal_btn_go')} <ExternalLink className="h-4 w-4"/></a></div>
                 </div>
             </div>
           </div>
         </div>
       )}
+
+      <footer className="bg-slate-900 text-slate-400 py-10 mt-auto">
+          <div className="container mx-auto px-4 text-center">
+              <Globe className="h-8 w-8 text-teal-400 mx-auto mb-4" />
+              <p className="mb-2 font-bold text-white">TRAVPN © 2024</p>
+              <p className="text-sm opacity-70">{t('footer_text')}</p>
+          </div>
+      </footer>
     </div>
   );
 };
