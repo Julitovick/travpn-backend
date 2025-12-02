@@ -36,13 +36,13 @@ app.post('/api/search', async (req, res) => {
     if (!SKYSCANNER_API_KEY) return res.status(500).json({ error: 'Falta API Key' });
 
     try {
-        // SOLUCIÓN: Uso estricto de comillas invertidas (backticks)
-        console.log(✈️ Buscando Top 5 vuelos en 5 mercados...`);
+        // SOLUCIÓN SEGURA: Comillas normales sin emojis para evitar errores de copia
+        console.log('Buscando Top 5 vuelos en 5 mercados...');
         
         const promises = TARGET_MARKETS.map(async (market) => {
             const options = {
                 method: 'GET',
-                url: `https://${SKYSCANNER_HOST}/flights/search-one-way`,
+                url: 'https://' + SKYSCANNER_HOST + '/flights/search-one-way',
                 params: {
                     fromEntityId: origin, 
                     toEntityId: destination,
@@ -95,11 +95,11 @@ app.post('/api/hotels', async (req, res) => {
     const g = guests || { adults: 2, children: 0 };
     
     try {
-        // SOLUCIÓN: Uso estricto de comillas invertidas
-        console.log(`🏨 Buscando hoteles en: ${destination}`);
+        // SOLUCIÓN SEGURA: Concatenación estándar
+        console.log('Buscando hoteles en: ' + destination);
 
         const locOptions = {
-            method: 'GET', url: `https://${BOOKING_HOST}/v1/hotels/locations`,
+            method: 'GET', url: 'https://' + BOOKING_HOST + '/v1/hotels/locations',
             params: { name: destination, locale: 'es' },
             headers: { 'X-RapidAPI-Key': BOOKING_API_KEY, 'X-RapidAPI-Host': BOOKING_HOST }
         };
@@ -110,7 +110,7 @@ app.post('/api/hotels', async (req, res) => {
 
         const promises = TARGET_MARKETS.map(async (market) => {
             const searchOptions = {
-                method: 'GET', url: `https://${BOOKING_HOST}/v1/hotels/search`,
+                method: 'GET', url: 'https://' + BOOKING_HOST + '/v1/hotels/search',
                 params: {
                     checkin_date: date, checkout_date: returnDate,
                     dest_id: destData.dest_id, dest_type: destData.dest_type,
@@ -148,18 +148,18 @@ app.post('/api/hotels', async (req, res) => {
 app.post('/api/cruises', async (req, res) => {
     const { destination } = req.body;
     try {
-        // SOLUCIÓN: Uso estricto de comillas invertidas
-        console.log(`🚢 Buscando cruceros: ${destination}`);
+        // SOLUCIÓN SEGURA: Concatenación estándar
+        console.log('Buscando cruceros: ' + destination);
         
         const options = {
             method: 'GET',
-            url: `https://${CRUISE_HOST}/cruises/search`, 
+            url: 'https://' + CRUISE_HOST + '/cruises/search', 
             params: { query: destination },
             headers: { 'X-RapidAPI-Key': CRUISE_API_KEY, 'X-RapidAPI-Host': CRUISE_HOST }
         };
 
         let basePrice = 500;
-        let cruiseName = `Crucero por ${destination}`;
+        let cruiseName = 'Crucero por ' + destination;
         let cruiseLine = "Royal Caribbean";
 
         try {
@@ -189,4 +189,4 @@ app.post('/api/cruises', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor con Sintaxis Corregida listo en ${PORT}`));
+app.listen(PORT, () => console.log('Servidor con Sintaxis Segura listo en ' + PORT));
