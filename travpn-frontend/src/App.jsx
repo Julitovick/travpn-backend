@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Plane, MapPin, Globe, Info, X, Hotel, Ship, Shield, CheckCircle, ExternalLink, AlertTriangle, EyeOff, CreditCard, Calendar, Lock, Users, ChevronDown, Plus, Minus, ChevronRight, Check } from 'lucide-react';
 
-const API_URL_BASE = 'https://travpn-backend-x82z.onrender.com/api'; 
+// ✅ URL ACTUALIZADA CON LA TUYA
+const API_URL_BASE = 'https://travpn-backend.onrender.com/api'; 
 
-// TASAS DE CAMBIO COMPLETAS PARA ORDENACIÓN PRECISA
 const EXCHANGE_RATES = {
   'EUR': 1.0, 'USD': 0.92, 'BRL': 0.18, 'ARS': 0.0011, 'INR': 0.011, 'TRY': 0.029, 
   'JPY': 0.0062, 'MXN': 0.054, 'CZK': 0.039, 'PLN': 0.23, 'HUF': 0.0025,
   'COP': 0.00024, 'CLP': 0.0010, 'PEN': 0.25, 'IDR': 0.000060, 'THB': 0.026, 
-  'VND': 0.000038, 'EGP': 0.020, 'ZAR': 0.050, 'MYR': 0.20, 'RON': 0.20, 'BGN': 0.51,
-  'GBP': 1.17, 'CAD': 0.68, 'AUD': 0.60
+  'VND': 0.000038, 'EGP': 0.020, 'ZAR': 0.050, 'MYR': 0.20, 'RON': 0.20, 'BGN': 0.51
 };
 
-// ... (BASE DE DATOS DE AEROPUERTOS IGUAL QUE ANTES) ...
+// --- BASE DE DATOS DE AEROPUERTOS OPTIMIZADA ---
 const AIRPORTS = [
+  // ESPAÑA (COMPLETO)
   {city:"Madrid Barajas",code:"MAD",country:"España"},{city:"Barcelona El Prat",code:"BCN",country:"España"},
   {city:"Palma de Mallorca",code:"PMI",country:"España"},{city:"Málaga Costa del Sol",code:"AGP",country:"España"},
   {city:"Alicante Elche",code:"ALC",country:"España"},{city:"Gran Canaria",code:"LPA",country:"España"},
@@ -92,11 +92,12 @@ const App = () => {
   const [suggestions, setSuggestions] = useState({ origin: [], destination: [] });
   const [showSuggestions, setShowSuggestions] = useState({ origin: false, destination: false });
 
+  // NUEVO CAMPO: directFlights
   const [formData, setFormData] = useState({ 
     origin: '', destination: '', date: '', returnDate: '',
     passengers: { adults: 1, children: 0, infants: 0 }, 
     guests: { adults: 2, children: 0 },
-    directFlights: false
+    directFlights: false // Estado para el checkbox
   });
 
   useEffect(() => {
@@ -196,7 +197,6 @@ const App = () => {
             price: Number(item.price) || 0
           }));
           
-          // ORDENACIÓN CLAVE: Más barato primero
           processed.sort((a, b) => {
             const priceA = a.price * (EXCHANGE_RATES[a.currency] || 1);
             const priceB = b.price * (EXCHANGE_RATES[b.currency] || 1);
@@ -216,10 +216,29 @@ const App = () => {
       <div className="bg-blue-900 text-white pb-64 relative overflow-hidden transition-all duration-1000">
         <div className="absolute top-4 right-4 z-20 flex gap-3">
             <div className="bg-black/30 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/20 hover:bg-black/40 transition">
-                <Globe className="h-3 w-3 text-slate-300"/><select value={userLanguage} onChange={(e) => setUserLanguage(e.target.value)} className="bg-transparent font-bold text-white text-xs outline-none cursor-pointer uppercase"><option value="ES">ES</option><option value="EN">EN</option><option value="DE">DE</option><option value="FR">FR</option><option value="IT">IT</option></select>
+                <Globe className="h-3 w-3 text-slate-300"/>
+                <select 
+                    value={userLanguage} 
+                    onChange={(e) => setUserLanguage(e.target.value)} 
+                    className="bg-transparent font-bold text-white text-xs outline-none cursor-pointer uppercase"
+                >
+                    <option value="ES" className="text-black bg-white">ES</option>
+                    <option value="EN" className="text-black bg-white">EN</option>
+                    <option value="DE" className="text-black bg-white">DE</option>
+                    <option value="FR" className="text-black bg-white">FR</option>
+                    <option value="IT" className="text-black bg-white">IT</option>
+                </select>
             </div>
             <div className="bg-black/30 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/20 hover:bg-black/40 transition">
-                <span className="text-xs text-slate-200 uppercase font-semibold">Moneda:</span><select value={userCurrency} onChange={(e) => setUserCurrency(e.target.value)} className="bg-transparent font-bold text-white outline-none cursor-pointer"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option></select>
+                <span className="text-xs text-slate-200 uppercase font-semibold">Moneda:</span>
+                <select 
+                    value={userCurrency} 
+                    onChange={(e) => setUserCurrency(e.target.value)} 
+                    className="bg-transparent font-bold text-white outline-none cursor-pointer"
+                >
+                    <option value="EUR" className="text-black bg-white">EUR (€)</option>
+                    <option value="USD" className="text-black bg-white">USD ($)</option>
+                </select>
             </div>
         </div>
         {bgImage && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${bgImage}')` }} />}
