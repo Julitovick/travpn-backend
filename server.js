@@ -15,7 +15,6 @@ const SKYSCANNER_API_KEY = COMMON_KEY;
 const BOOKING_API_KEY    = COMMON_KEY;
 const CRUISE_API_KEY     = COMMON_KEY; 
 
-// HOSTS DE LAS APIS (CONFIRMADOS)
 const SKYSCANNER_HOST = 'flights-sky.p.rapidapi.com'; 
 const BOOKING_HOST    = 'booking-com18.p.rapidapi.com'; 
 const CRUISE_HOST     = 'cruisewave-api.p.rapidapi.com'; 
@@ -29,7 +28,10 @@ const TARGET_MARKETS = [
     { code: 'BR', currency: 'BRL', name: 'Brasil' }
 ];
 
-// --- 1. VUELOS (Robustecido) ---
+// Configuración global de Axios para evitar cuelgues
+axios.defaults.timeout = 8000; // 8 segundos máximo por petición externa
+
+// --- 1. VUELOS ---
 app.post('/api/search', async (req, res) => {
     const { origin, destination, date, passengers, directFlights } = req.body; 
     const p = passengers || { adults: 1, children: 0, infants: 0 };
@@ -64,21 +66,26 @@ app.post('/api/search', async (req, res) => {
                     airline: flight.legs?.[0]?.carriers?.marketing?.[0]?.name || "Ver detalles"
                 }));
             } catch (err) {
-                console.error(`Error vuelos ${market.name}: ${err.message}`);
-                return []; // Si falla un país, devolvemos vacío para no romper todo
+                // Si falla un país (ej: timeout o límite API), devolvemos array vacío y seguimos
+                console.warn(`⚠️ Fallo vuelos en ${market.name}: ${err.message}`);
+                return []; 
             }
         });
 
         const results = await Promise.all(promises);
-        res.json(results.flat());
+        const flatResults = results.flat();
+        
+        // Si no hay resultados, enviamos array vacío (Frontend mostrará mensaje "No encontrado")
+        res.json(flatResults);
 
     } catch (error) {
-        console.error("Error General Vuelos:", error.message);
-        res.status(200).json([]); // Devolvemos vacío en vez de error 500
+        console.error("🔥 Error Crítico Vuelos:", error.message);
+        // IMPORTANTE: Siempre devolvemos JSON válido, nunca error 500 al cliente
+        res.status(200).json([]); 
     }
 });
 
-// --- 2. HOTELES (Corregido para booking-com18) ---
+// --- 2. HOTELES ---
 app.post('/api/hotels', async (req, res) => {
     const { destination, date, returnDate, guests } = req.body;
     const g = guests || { adults: 2 };
@@ -86,24 +93,25 @@ app.post('/api/hotels', async (req, res) => {
     try {
         console.log(`🏨 Buscando hoteles en: ${destination}`);
 
-        // PASO A: Buscar ID (Usando endpoint de booking-com18)
-        const locOptions = {
-            method: 'GET',
-            url: `https://${BOOKING_HOST}/stays/auto-complete`,
-            params: { query: destination },
-            headers: { 'X-RapidAPI-Key': BOOKING_API_KEY, 'X-RapidAPI-Host': BOOKING_HOST }
-        };
-
-        const locRes = await axios.request(locOptions);
-        // booking-com18 suele devolver 'data' con array
-        const destData = locRes.data?.data?.[0] || locRes.data?.[0];
-        
-        if (!destData || !destData.id) {
-            console.log("Ciudad no encontrada en Booking");
-            return res.json([]); 
+        // PASO A: Buscar ID (1 sola petición)
+        let destData = null;
+        try {
+            const locOptions = {
+                method: 'GET',
+                url: `https://${BOOKING_HOST}/stays/auto-complete`,
+                params: { query: destination },
+                headers: { 'X-RapidAPI-Key': BOOKING_API_KEY, 'X-RapidAPI-Host': BOOKING_HOST }
+            };
+            const locRes = await axios.request(locOptions);
+            destData = locRes.data?.data?.[0] || locRes.data?.[0];
+        } catch (e) {
+            console.error("Error buscando ID ciudad:", e.message);
+            return res.json([]);
         }
+        
+        if (!destData || !destData.id) return res.json([]); 
 
-        // PASO B: Buscar Hoteles
+        // PASO B: Buscar Hoteles (Paralelo con protección)
         const promises = TARGET_MARKETS.map(async (market) => {
             const searchOptions = {
                 method: 'GET',
@@ -131,12 +139,11 @@ app.post('/api/hotels', async (req, res) => {
                     hotelName: h.name || h.hotel_name,
                     stars: h.qualityClass || h.class || 3,
                     image: h.photoUrls?.[0]?.replace('square60', 'max500') || h.main_photo_url,
-                    // Manejo de precio seguro
                     price: h.priceBreakdown?.grossPrice?.value || h.min_total_price || 0,
                     currency: market.currency 
                 }));
             } catch (err) {
-                console.error(`Error hoteles ${market.name}: ${err.message}`);
+                console.warn(`⚠️ Fallo hoteles en ${market.name}: ${err.message}`);
                 return [];
             }
         });
@@ -145,12 +152,12 @@ app.post('/api/hotels', async (req, res) => {
         res.json(results.flat());
 
     } catch (error) {
-        console.error("Error General Hoteles:", error.message);
+        console.error("🔥 Error Crítico Hoteles:", error.message);
         res.status(200).json([]);
     }
 });
 
-// --- 3. CRUCEROS (Buscador) ---
+// --- 3. CRUCEROS ---
 app.post('/api/cruises', async (req, res) => {
     const { destination } = req.body;
     try {
@@ -173,7 +180,7 @@ app.post('/api/cruises', async (req, res) => {
                 basePrice = real.price || 500;
                 cruiseName = real.title || real.name || cruiseName;
             }
-        } catch (e) { console.log("Error API Cruceros"); }
+        } catch (e) { console.warn("Fallo API Cruceros, usando fallback interno."); }
 
         const rates = { 'EUR': 1, 'BRL': 6.1, 'TRY': 35.5, 'ARS': 1100.0, 'USD': 1.08, 'CZK': 25.3, 'PLN': 4.3, 'HUF': 395.0 };
         const results = TARGET_MARKETS.map(market => {
@@ -187,8 +194,8 @@ app.post('/api/cruises', async (req, res) => {
             };
         });
         res.json(results);
-    } catch (error) { res.json([]); }
+    } catch (error) { res.status(200).json([]); }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor ROBUSTO listo en ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor Blindado listo en ${PORT}`));
