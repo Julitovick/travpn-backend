@@ -13,9 +13,10 @@ const SKYSCANNER_API_KEY = '1989077d03mshb8c66c4fa42d362p1f2868jsn997c43a1736d';
 const BOOKING_API_KEY    = '1989077d03mshb8c66c4fa42d362p1f2868jsn997c43a1736d';
 const CRUISE_API_KEY     = '1989077d03mshb8c66c4fa42d362p1f2868jsn997c43a1736d'; 
 
-const SKYSCANNER_HOST = 'skyscanner44.p.rapidapi.com';
-const BOOKING_HOST    = 'booking-com.p.rapidapi.com';
-const CRUISE_HOST     = 'cruise-data.p.rapidapi.com'; 
+// HOSTS DE LAS APIS
+const SKYSCANNER_HOST = 'flights-sky.p.rapidapi.com'; 
+const BOOKING_HOST    = 'booking-com18.p.rapidapi.com'; 
+const CRUISE_HOST     = 'cruisewave-api.p.rapidapi.com'; // <--- NUEVO HOST CRUCEROS
 // ------------------------------------------------------------------
 
 // MERCADOS REALES A CONSULTAR
@@ -40,42 +41,51 @@ app.post('/api/search', async (req, res) => {
         const promises = TARGET_MARKETS.map(async (market) => {
             const options = {
                 method: 'GET',
-                url: `https://${SKYSCANNER_HOST}/search`,
+                url: `https://${SKYSCANNER_HOST}/flights/search-one-way`,
                 params: {
-                    adults: p.adults, children: p.children, infants: p.infants,
-                    origin: origin, destination: destination, departureDate: date,
-                    currency: market.currency, countryCode: market.code, market: market.code,
-                    stops: directFlights ? '0' : undefined 
+                    fromEntityId: origin, 
+                    toEntityId: destination,
+                    departDate: date,
+                    adults: p.adults,
+                    children: p.children,
+                    infants: p.infants,
+                    currency: market.currency, 
+                    market: market.code,
+                    countryCode: market.code,
+                    stops: directFlights ? 'direct' : 'any' 
                 },
                 headers: { 'X-RapidAPI-Key': SKYSCANNER_API_KEY, 'X-RapidAPI-Host': SKYSCANNER_HOST }
             };
 
             try {
                 const response = await axios.request(options);
-                const bucket = response.data.itineraries?.buckets?.find(b => b.id === 'Cheapest');
-                if (!bucket || !bucket.items) return [];
+                const itineraries = response.data.data?.itineraries || [];
+                
+                if (itineraries.length === 0) return [];
 
-                // Cogemos los 5 mejores de este mercado
-                return bucket.items.slice(0, 5).map(flightData => {
-                    let airline = "Ver detalles";
-                    try { airline = flightData.legs[0].carriers.marketing[0].name; } catch(e){}
-
+                return itineraries.slice(0, 5).map(flight => {
                     return {
                         type: 'flight',
                         country: market.name,
                         flag: market.code,
-                        price: flightData.price.raw,
+                        price: flight.price?.raw || flight.price?.amount, 
                         currency: market.currency,
-                        airline: airline
+                        airline: flight.legs?.[0]?.carriers?.marketing?.[0]?.name || "Ver detalles"
                     };
                 });
-            } catch (err) { return []; }
+
+            } catch (err) {
+                return [];
+            }
         });
 
         const resultsArrays = await Promise.all(promises);
-        res.json(resultsArrays.flat()); // Devolvemos TODOS los resultados juntos
+        res.json(resultsArrays.flat());
 
-    } catch (error) { res.status(500).json({ error: 'Error general en vuelos' }); }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error general en vuelos' });
+    }
 });
 
 // --- 2. HOTELES (Top 5 por país) ---
@@ -111,7 +121,6 @@ app.post('/api/hotels', async (req, res) => {
                 const hotelRes = await axios.request(searchOptions);
                 const hotels = hotelRes.data.result || [];
 
-                // 5 Mejores hoteles de este mercado
                 return hotels.slice(0, 5).map(bestHotel => ({
                     type: 'hotel',
                     country: market.name,
@@ -131,46 +140,39 @@ app.post('/api/hotels', async (req, res) => {
     } catch (error) { console.error(error); res.json([]); }
 });
 
-// --- 3. CRUCEROS (Lógica de Comparativa) ---
+// --- 3. CRUCEROS (Cruisewave) ---
 app.post('/api/cruises', async (req, res) => {
     const { destination } = req.body;
-    console.log(`🚢 Buscando cruceros en 5 mercados: ${destination}`);
-
     try {
-        // A. Buscar Precio Base Real (Intentamos)
         const options = {
             method: 'GET',
-            url: `https://${CRUISE_HOST}/search`, 
-            params: { query: destination, location: destination },
+            // Usamos un endpoint genérico de búsqueda, si la API es diferente puede requerir ajuste
+            url: `https://${CRUISE_HOST}/cruises/search`, 
+            params: { query: destination },
             headers: { 'X-RapidAPI-Key': CRUISE_API_KEY, 'X-RapidAPI-Host': CRUISE_HOST }
         };
 
-        let basePrice = 500; // Fallback razonable
+        let basePrice = 500;
         let cruiseName = `Crucero por ${destination}`;
         let cruiseLine = "Royal Caribbean";
 
         try {
             const response = await axios.request(options);
-            const items = response.data.results || response.data.cruises || response.data;
+            // Adaptar según respuesta de Cruisewave
+            const items = response.data.data || response.data;
             if (items && items.length > 0) {
                 const real = items[0];
-                basePrice = real.price?.total || real.price || 500;
-                cruiseName = real.name || real.title || cruiseName;
-                cruiseLine = real.line?.name || cruiseLine;
+                basePrice = real.price || 500;
+                cruiseName = real.title || real.name || cruiseName;
             }
         } catch (apiError) {
-            console.log("API Cruceros limitada, usando estimación inteligente.");
+             console.log("Error API Cruceros, usando fallback inteligente.");
         }
 
-        // B. Generar Comparativa 5 Mercados
-        // Tasas aproximadas para conversión interna
         const rates = { 'EUR': 1, 'BRL': 6.1, 'TRY': 35.5, 'ARS': 1100.0, 'USD': 1.08, 'CZK': 25.3, 'PLN': 4.3, 'HUF': 395.0 };
-        
         const results = TARGET_MARKETS.map(market => {
             const rate = rates[market.currency] || 1;
-            // Los cruceros varían menos, pero Brasil/Turquía suelen tener tasas portuarias distintas
             const savings = market.code !== 'ES' ? (0.92 - Math.random() * 0.12) : 1;
-            
             return {
                 type: 'cruise', country: market.name, flag: market.code,
                 cruiseLine: cruiseLine, cruiseName: cruiseName,
@@ -178,11 +180,9 @@ app.post('/api/cruises', async (req, res) => {
                 currency: market.currency
             };
         });
-
         res.json(results);
-
     } catch (error) { res.json([]); }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor Multi-Mercado TOTAL listo en ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor con Cruisewave actualizado listo en ${PORT}`));
