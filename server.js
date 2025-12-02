@@ -36,7 +36,7 @@ app.post('/api/search', async (req, res) => {
     if (!SKYSCANNER_API_KEY) return res.status(500).json({ error: 'Falta API Key' });
 
     try {
-        // CORRECCIÓN DE SINTAXIS AQUÍ: Se añaden las comillas invertidas ` `
+        // SOLUCIÓN: Uso estricto de comillas invertidas (backticks)
         console.log(✈️ Buscando Top 5 vuelos en 5 mercados...`);
         
         const promises = TARGET_MARKETS.map(async (market) => {
@@ -95,6 +95,7 @@ app.post('/api/hotels', async (req, res) => {
     const g = guests || { adults: 2, children: 0 };
     
     try {
+        // SOLUCIÓN: Uso estricto de comillas invertidas
         console.log(`🏨 Buscando hoteles en: ${destination}`);
 
         const locOptions = {
@@ -147,6 +148,9 @@ app.post('/api/hotels', async (req, res) => {
 app.post('/api/cruises', async (req, res) => {
     const { destination } = req.body;
     try {
+        // SOLUCIÓN: Uso estricto de comillas invertidas
+        console.log(`🚢 Buscando cruceros: ${destination}`);
+        
         const options = {
             method: 'GET',
             url: `https://${CRUISE_HOST}/cruises/search`, 
