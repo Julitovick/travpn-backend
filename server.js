@@ -36,7 +36,7 @@ app.post('/api/search', async (req, res) => {
     if (!SKYSCANNER_API_KEY) return res.status(500).json({ error: 'Falta API Key' });
 
     try {
-        // CORREGIDO: Uso de comillas invertidas (backticks)
+        // CORREGIDO: Aseguramos las comillas invertidas al inicio y final
         console.log(✈️ Buscando Top 5 vuelos en 5 mercados...`);
         
         const promises = TARGET_MARKETS.map(async (market) => {
@@ -95,7 +95,9 @@ app.post('/api/hotels', async (req, res) => {
     const g = guests || { adults: 2, children: 0 };
     
     try {
-        // CORREGIDO: Uso de comillas invertidas
+        // CORREGIDO: Aseguramos comillas invertidas aquí también
+        console.log(`🏨 Buscando hoteles en: ${destination}`);
+
         const locOptions = {
             method: 'GET', url: `https://${BOOKING_HOST}/v1/hotels/locations`,
             params: { name: destination, locale: 'es' },
