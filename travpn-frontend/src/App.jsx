@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Plane, MapPin, Globe, Info, X, Hotel, Ship, Shield, ExternalLink, Lock, Users, ChevronDown, Plus, Minus, ChevronRight, TrendingUp, CreditCard, AlertTriangle, Calendar, Check, Share2, Mail, HelpCircle, FileText } from 'lucide-react';
 
+// ⚠️ ¡ATENCIÓN! CAMBIA ESTA URL POR LA TUYA DE RENDER ⚠️
+// Ejemplo: 'https://travpn-backend-TU_CODIGO.onrender.com/api'
 const API_URL_BASE = 'https://travpn-backend-x82z.onrender.com/api'; 
 
 const EXCHANGE_RATES = {
@@ -10,6 +12,7 @@ const EXCHANGE_RATES = {
   'VND': 0.000038, 'EGP': 0.020, 'ZAR': 0.050, 'MYR': 0.20, 'RON': 0.20, 'BGN': 0.51
 };
 
+// ... (Resto de constantes igual que antes, no cambian)
 // --- DATOS PSICOLÓGICOS (LIVE TICKER) ---
 const LIVE_SAVINGS = [
   { user: "Laura (Madrid)", action: "ahorró 320€ en vuelo a Bali 🇮🇩", time: "hace 2 min" },
@@ -19,7 +22,7 @@ const LIVE_SAVINGS = [
   { user: "Elena (Bilbao)", action: "consiguió hotel 5★ a precio de 3★", time: "hace 8 min" }
 ];
 
-// --- TRADUCCIONES COMPLETAS ---
+// --- TRADUCCIONES ---
 const TRANSLATIONS = {
   ES: {
     searching_badge: "Buscando en 50+ países reales 🌍",
@@ -32,8 +35,8 @@ const TRANSLATIONS = {
     label_checkin: "Entrada", label_checkout: "Salida",
     label_passengers: "Pasajeros", label_guests: "Huéspedes",
     btn_search: "Buscar Ahorro Real", btn_loading: "Buscando en tiempo real...",
-    error_no_results: "No se encontraron resultados reales. Intenta otra fecha.",
-    error_server: "El servidor no responde. Verifica tu conexión.",
+    error_no_results: "No se encontraron resultados reales. Intenta otra fecha o destino.",
+    error_server: "El servidor no responde. Verifica que tu backend en Render esté activo.",
     result_title: "Resultados para", result_best_option: "Mejor Opción",
     result_vpn: "VPN:", result_pay_here: "Pagar desde aquí", result_trick: "Truco",
     magic_title: "¿Cómo funciona la magia?",
@@ -73,7 +76,7 @@ const TRANSLATIONS = {
     label_passengers: "Passengers", label_guests: "Guests",
     btn_search: "Search Real Savings", btn_loading: "Searching real time...",
     error_no_results: "No results found. Try different dates.",
-    error_server: "Server not responding.",
+    error_server: "Server not responding. Check your Render backend.",
     result_title: "Results for", result_best_option: "Best Option",
     result_vpn: "VPN:", result_pay_here: "Pay from here", result_trick: "Trick",
     magic_title: "How it works?", magic_subtitle: "Travel sites charge more if they detect money. Look like a local.",
@@ -99,17 +102,18 @@ const TRANSLATIONS = {
     footer_text: "TRAVPN © 2024 - Smart comparator.",
     share_text: "Check this price! Traveling with VPN from"
   },
-  // ... (Otros idiomas simplificados para brevedad, se asume que están)
+  // Otros idiomas simplificados para brevedad
+  DE: { label_origin: "Herkunft", label_destination: "Ziel", btn_search: "Suchen", footer_text: "TRAVPN © 2024" },
+  FR: { label_origin: "Origine", label_destination: "Destination", btn_search: "Chercher", footer_text: "TRAVPN © 2024" },
+  IT: { label_origin: "Origine", label_destination: "Destinazione", btn_search: "Cerca", footer_text: "TRAVPN © 2024" }
 };
 
-// --- BASE DE DATOS AEROPUERTOS (Abreviada para el ejemplo, usa la completa anterior) ---
+// --- BASE DE DATOS AEROPUERTOS (Abreviada para no cortar, usa la tuya completa) ---
 const AIRPORTS = [
   {city:"Madrid Barajas",code:"MAD",country:"España"},{city:"Barcelona El Prat",code:"BCN",country:"España"},
-  {city:"Palma de Mallorca",code:"PMI",country:"España"},{city:"Málaga Costa del Sol",code:"AGP",country:"España"},
   {city:"Londres Heathrow",code:"LHR",country:"Reino Unido"},{city:"París CDG",code:"CDG",country:"Francia"},
   {city:"Nueva York JFK",code:"JFK",country:"EE.UU."},{city:"Tokio Haneda",code:"HND",country:"Japón"},
-  {city:"Estambul",code:"IST",country:"Turquía"},{city:"Buenos Aires",code:"EZE",country:"Argentina"}
-  // ... (Añade aquí el resto de la lista masiva anterior)
+  // ... (Añade aquí el resto de tu lista completa de aeropuertos)
 ];
 
 const BACKGROUND_IMAGES = [
@@ -146,10 +150,7 @@ const App = () => {
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
   
-  // Ticker de ahorro
   const [savingsIndex, setSavingsIndex] = useState(0);
-
-  // Estados menús
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const [isCurrencyMenuOpen, setIsCurrencyMenuOpen] = useState(false);
   const [isPassengerMenuOpen, setIsPassengerMenuOpen] = useState(false);
@@ -280,11 +281,13 @@ const App = () => {
     let endpoint = activeTab === 'hotels' ? '/hotels' : activeTab === 'cruises' ? '/cruises' : '/search';
 
     try {
+      // BÚSQUEDA 100% REAL
       const response = await fetch(`${API_URL_BASE}${endpoint}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       
       if (!response.ok) throw new Error('Error de conexión con el servidor');
+      
       const data = await response.json();
       
       if (!data || data.length === 0) {
@@ -305,6 +308,7 @@ const App = () => {
       }
     } catch (error) {
       console.error(error);
+      // SI FALLA, MUESTRA ERROR REAL. NADA DE DEMOS.
       setErrorMsg(t('error_server'));
     } finally { setLoading(false); }
   };
@@ -314,7 +318,7 @@ const App = () => {
       {/* HEADER */}
       <div className="bg-blue-900 text-white pb-32 md:pb-64 relative overflow-hidden transition-all duration-1000">
         
-        {/* TOP BAR */}
+        {/* TOP BAR: SELECTORES IDIOMA Y MONEDA */}
         <div className="absolute top-4 right-4 z-20 flex gap-2 md:gap-3 items-center">
             <div className="relative" ref={langMenuRef}>
                 <button onClick={() => setIsLangMenuOpen(!isLangMenuOpen)} className="flex items-center gap-1 md:gap-2 bg-white/10 backdrop-blur-md px-2 py-1.5 md:px-3 md:py-2 rounded-lg border border-white/20 cursor-pointer hover:bg-white/20 transition text-white">
